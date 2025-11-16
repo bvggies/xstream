@@ -80,7 +80,7 @@ const ChatButton = () => {
     } else {
       setFilteredConversations(userConversations);
     }
-  }, [searchQuery, userConversations, user.role]);
+  }, [searchQuery, userConversations, user?.role]);
 
   const fetchChatHistory = async () => {
     try {
