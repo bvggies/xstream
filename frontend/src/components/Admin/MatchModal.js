@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axiosInstance from '../../utils/axios';
 import toast from 'react-hot-toast';
-import { FiX } from 'react-icons/fi';
+import { FiX, FiSearch } from 'react-icons/fi';
+import { popularTeams, getTeamLogo } from '../../data/teams';
+import { popularLeagues, getLeagueLogo } from '../../data/leagues';
 
 const MatchModal = ({ match, onClose }) => {
   const [formData, setFormData] = useState({
