@@ -131,6 +131,7 @@ const login = async (req, res, next) => {
         avatar: user.avatar,
         isVerified: user.isVerified,
       },
+      redirectTo: user.role === 'ADMIN' ? '/admin' : '/dashboard',
     });
   } catch (error) {
     next(error);
