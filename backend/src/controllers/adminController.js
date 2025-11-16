@@ -494,6 +494,7 @@ module.exports = {
   updateUser,
   banUser,
   unbanUser,
+  getAllMatches,
   createMatch,
   updateMatch,
   endMatch,
