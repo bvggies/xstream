@@ -85,16 +85,30 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// Rate limiting - adjust for serverless
+// Rate limiting - more lenient for serverless/Vercel
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 200, // Increased limit for serverless (IPs might be shared)
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  // Skip rate limiting for health checks
+  skip: (req) => req.path === '/api/health' || req.path === '/health',
+  // Use a more lenient key generator for serverless
+  keyGenerator: (req) => {
+    // In serverless, use a combination of IP and user agent
+    return req.ip || req.connection.remoteAddress || 'unknown';
+  },
 });
 
-app.use('/api/', limiter);
+// Apply rate limiting only to API routes (not health checks)
+app.use('/api/', (req, res, next) => {
+  // Skip rate limiting for health endpoint
+  if (req.path === '/health') {
+    return next();
+  }
+  return limiter(req, res, next);
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
