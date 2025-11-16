@@ -53,8 +53,11 @@ const Home = () => {
     upcomingMatches.sort((a, b) => new Date(a.matchDate) - new Date(b.matchDate));
   }
 
+  // Debug: Log current state
+  console.log('Home component rendering:', { matches, highlights, loading, highlightsLoading });
+
   return (
-    <div className="min-h-screen bg-dark-900">
+    <div className="min-h-screen bg-dark-900 text-white">
       {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden bg-dark-900">
         <div
