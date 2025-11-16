@@ -74,6 +74,11 @@ model Highlight {
   duration     Int?     // Duration in seconds
   views        Int      @default(0)
   isVisible    Boolean  @default(true) @map("is_visible")
+  // Match scores (optional)
+  homeScore    Int?     @map("home_score")
+  awayScore    Int?     @map("away_score")
+  // Match statistics (JSON string for flexibility)
+  statistics   String?  // JSON string: { possession: { home: 60, away: 40 }, shots: { home: 12, away: 8 }, ... }
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

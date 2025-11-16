@@ -54,6 +54,9 @@ const createHighlight = async (req, res, next) => {
       videoLinks,
       duration,
       isVisible = true,
+      homeScore,
+      awayScore,
+      statistics,
     } = req.body;
 
     // Validate videoLinks is an array
@@ -73,6 +76,9 @@ const createHighlight = async (req, res, next) => {
         videoLinks: linksArray,
         duration: duration ? parseInt(duration) : null,
         isVisible,
+        homeScore: homeScore ? parseInt(homeScore) : null,
+        awayScore: awayScore ? parseInt(awayScore) : null,
+        statistics: statistics ? (typeof statistics === 'string' ? statistics : JSON.stringify(statistics)) : null,
       },
     });
 
@@ -96,6 +102,9 @@ const updateHighlight = async (req, res, next) => {
       videoLinks,
       duration,
       isVisible,
+      homeScore,
+      awayScore,
+      statistics,
     } = req.body;
 
     const updateData = {};
@@ -113,6 +122,11 @@ const updateHighlight = async (req, res, next) => {
     }
     if (duration !== undefined) updateData.duration = duration ? parseInt(duration) : null;
     if (isVisible !== undefined) updateData.isVisible = isVisible;
+    if (homeScore !== undefined) updateData.homeScore = homeScore ? parseInt(homeScore) : null;
+    if (awayScore !== undefined) updateData.awayScore = awayScore ? parseInt(awayScore) : null;
+    if (statistics !== undefined) {
+      updateData.statistics = statistics ? (typeof statistics === 'string' ? statistics : JSON.stringify(statistics)) : null;
+    }
 
     const highlight = await prisma.highlight.update({
       where: { id },

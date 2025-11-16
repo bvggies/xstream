@@ -58,6 +58,23 @@ const HighlightCard = ({ highlight, index }) => {
           <h3 className="text-lg font-bold text-white mb-2 line-clamp-2 group-hover:text-primary-400 transition-colors">
             {highlight.title}
           </h3>
+          
+          {/* Match Score Display */}
+          {(highlight.homeScore !== null && highlight.homeScore !== undefined) || 
+           (highlight.awayScore !== null && highlight.awayScore !== undefined) ? (
+            <div className="mb-2 flex items-center space-x-2">
+              <div className="flex items-center space-x-2 bg-dark-800 px-3 py-1.5 rounded-lg">
+                <span className="text-white font-bold text-lg">
+                  {highlight.homeScore ?? 0}
+                </span>
+                <span className="text-dark-400">-</span>
+                <span className="text-white font-bold text-lg">
+                  {highlight.awayScore ?? 0}
+                </span>
+              </div>
+            </div>
+          ) : null}
+          
           {highlight.description && (
             <p className="text-dark-400 text-sm line-clamp-2 mb-2">{highlight.description}</p>
           )}

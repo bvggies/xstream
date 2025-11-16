@@ -14,6 +14,9 @@ const AdminHighlightForm = ({ highlight, onClose, onSuccess }) => {
     videoLinks: [''],
     duration: '',
     isVisible: true,
+    homeScore: '',
+    awayScore: '',
+    statistics: '',
   });
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -30,6 +33,9 @@ const AdminHighlightForm = ({ highlight, onClose, onSuccess }) => {
         videoLinks: highlight.videoLinks && highlight.videoLinks.length > 0 ? highlight.videoLinks : [''],
         duration: highlight.duration || '',
         isVisible: highlight.isVisible !== undefined ? highlight.isVisible : true,
+        homeScore: highlight.homeScore || '',
+        awayScore: highlight.awayScore || '',
+        statistics: highlight.statistics ? (typeof highlight.statistics === 'string' ? highlight.statistics : JSON.stringify(highlight.statistics)) : '',
       });
     }
   }, [highlight]);
@@ -53,6 +59,9 @@ const AdminHighlightForm = ({ highlight, onClose, onSuccess }) => {
         videoLinks: formData.videoLinks.filter((link) => link.trim()),
         duration: formData.duration ? parseInt(formData.duration) : null,
         matchId: formData.matchId || null,
+        homeScore: formData.homeScore ? parseInt(formData.homeScore) : null,
+        awayScore: formData.awayScore ? parseInt(formData.awayScore) : null,
+        statistics: formData.statistics?.trim() || null,
       };
 
       if (highlight) {
@@ -220,6 +229,50 @@ const AdminHighlightForm = ({ highlight, onClose, onSuccess }) => {
                   <span>Add Another Link</span>
                 </button>
               </div>
+            </div>
+
+            {/* Match Scores (Optional) */}
+            <div className="border-t border-dark-700 pt-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Match Scores (Optional)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Home Score</label>
+                  <input
+                    type="number"
+                    value={formData.homeScore}
+                    onChange={(e) => setFormData({ ...formData, homeScore: e.target.value })}
+                    className="input-field"
+                    min="0"
+                    placeholder="e.g., 2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Away Score</label>
+                  <input
+                    type="number"
+                    value={formData.awayScore}
+                    onChange={(e) => setFormData({ ...formData, awayScore: e.target.value })}
+                    className="input-field"
+                    min="0"
+                    placeholder="e.g., 1"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Match Statistics (Optional) */}
+            <div className="border-t border-dark-700 pt-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Match Statistics (Optional)</h3>
+              <p className="text-dark-400 text-sm mb-3">
+                Enter statistics as JSON. Example: {"{"}"possession": {"{"}"home": 60, "away": 40{"}"}, "shots": {"{"}"home": 12, "away": 8{"}"}{"}"}
+              </p>
+              <textarea
+                value={formData.statistics}
+                onChange={(e) => setFormData({ ...formData, statistics: e.target.value })}
+                className="input-field font-mono text-sm"
+                rows={6}
+                placeholder='{"possession": {"home": 60, "away": 40}, "shots": {"home": 12, "away": 8}, "corners": {"home": 5, "away": 3}}'
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

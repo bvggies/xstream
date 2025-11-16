@@ -28,6 +28,9 @@ const Home = () => {
 
   const liveMatches = matches.filter((m) => m.status === 'LIVE');
   const upcomingMatches = matches.filter((m) => m.status === 'UPCOMING').slice(0, 6);
+  
+  // Sort upcoming matches by date
+  upcomingMatches.sort((a, b) => new Date(a.matchDate) - new Date(b.matchDate));
 
   return (
     <div className="min-h-screen">

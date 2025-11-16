@@ -28,6 +28,7 @@ import AdminAnalytics from './pages/Admin/Analytics';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from './components/ErrorBoundary';
 import ChatButton from './components/ChatButton';
+import ScrollToTop from './components/ScrollToTop';
 
 import AOS from 'aos';
 import 'aos/dist/aos.css';
@@ -49,6 +50,7 @@ function App() {
             <Navbar />
             <main className="flex-grow pt-16">
               <ChatButton />
+              <ScrollToTop />
               <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
