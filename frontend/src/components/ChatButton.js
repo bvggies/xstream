@@ -123,8 +123,17 @@ const ChatButton = () => {
         message: messageToSend,
       };
 
-      // If admin, we need to specify targetUserId (for now, send to all)
-      // TODO: Add user selection UI for admin
+      // If admin, try to get targetUserId from the most recent user message
+      if (user.role === 'ADMIN') {
+        // Find the most recent user message to reply to
+        const recentUserMessage = messages
+          .filter(m => !m.isAdmin)
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+        
+        if (recentUserMessage && recentUserMessage.userId) {
+          requestData.targetUserId = recentUserMessage.userId;
+        }
+      }
       
       const response = await axiosInstance.post('/chat/send', requestData);
 

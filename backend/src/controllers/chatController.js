@@ -80,12 +80,34 @@ const getChatHistory = async (req, res, next) => {
 
 const sendMessage = async (req, res, next) => {
   try {
-    const { message } = req.body;
+    const { message, targetUserId } = req.body;
     const io = getIO();
+
+    // Determine the userId for the message
+    // If admin, use targetUserId (the user they're replying to)
+    // If user, use their own userId
+    let messageUserId = req.user.id;
+    if (req.user.role === 'ADMIN') {
+      if (!targetUserId) {
+        // Admin sending without targetUserId - get the most recent user who messaged
+        const recentUserMessage = await prisma.chatMessage.findFirst({
+          where: { isAdmin: false },
+          orderBy: { createdAt: 'desc' },
+          select: { userId: true },
+        });
+        if (recentUserMessage) {
+          messageUserId = recentUserMessage.userId;
+        } else {
+          return res.status(400).json({ error: 'No user to reply to. Please specify targetUserId.' });
+        }
+      } else {
+        messageUserId = targetUserId;
+      }
+    }
 
     const chatMessage = await prisma.chatMessage.create({
       data: {
-        userId: req.user.id,
+        userId: messageUserId, // Message belongs to the target user's conversation
         message,
         isAdmin: req.user.role === 'ADMIN',
       },
@@ -94,18 +116,25 @@ const sendMessage = async (req, res, next) => {
     // Emit via Socket.io if available
     if (io) {
       if (req.user.role === 'ADMIN') {
-        // Admin sending to user - need targetUserId in request
-        const { targetUserId } = req.body;
-        if (targetUserId) {
-          io.to(`user:${targetUserId}`).emit('new_message', {
-            id: chatMessage.id,
-            userId: targetUserId,
-            message: chatMessage.message,
-            isAdmin: true,
-            createdAt: chatMessage.createdAt,
-            username: req.user.username,
-          });
-        }
+        // Admin sending to specific user
+        io.to(`user:${messageUserId}`).emit('new_message', {
+          id: chatMessage.id,
+          userId: messageUserId,
+          message: chatMessage.message,
+          isAdmin: true,
+          createdAt: chatMessage.createdAt,
+          username: req.user.username,
+        });
+        
+        // Also notify admin room
+        io.to('admin').emit('new_message', {
+          id: chatMessage.id,
+          userId: messageUserId,
+          message: chatMessage.message,
+          isAdmin: true,
+          createdAt: chatMessage.createdAt,
+          username: req.user.username,
+        });
       } else {
         // User sending to admin - broadcast to all admins
         io.to('admin').emit('new_message', {
