@@ -56,6 +56,18 @@ const Home = () => {
   // Debug: Log current state
   console.log('Home component rendering:', { matches, highlights, loading, highlightsLoading });
 
+  // Ensure we always render something
+  if (typeof matches === 'undefined') {
+    return (
+      <div className="min-h-screen bg-dark-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold mb-4">Loading...</h1>
+          <p className="text-dark-400">Please wait while we load the content.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-dark-900 text-white">
       {/* Hero Section */}
