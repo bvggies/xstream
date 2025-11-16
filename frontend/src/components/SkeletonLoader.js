@@ -45,3 +45,14 @@ export const SkeletonText = ({ lines = 3, className = '' }) => {
   );
 };
 
+// Default export for generic skeleton loader
+const SkeletonLoader = ({ className = '' }) => {
+  return (
+    <div className={`bg-dark-800 rounded-lg animate-pulse ${className}`}>
+      <div className="h-full w-full bg-dark-700 rounded-lg" />
+    </div>
+  );
+};
+
+export default SkeletonLoader;
+
