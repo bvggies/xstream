@@ -85,30 +85,29 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// Rate limiting - more lenient for serverless/Vercel
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Increased limit for serverless (IPs might be shared)
-  message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false,
-  // Skip rate limiting for health checks
-  skip: (req) => req.path === '/api/health' || req.path === '/health',
-  // Use a more lenient key generator for serverless
-  keyGenerator: (req) => {
-    // In serverless, use a combination of IP and user agent
-    return req.ip || req.connection.remoteAddress || 'unknown';
-  },
-});
+// Rate limiting - disabled in serverless (Vercel) as it doesn't work well with serverless functions
+// In serverless, each function instance has its own memory, so rate limiting won't work across instances
+if (!process.env.VERCEL) {
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 200, // limit each IP to 200 requests per windowMs
+    message: 'Too many requests from this IP, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => req.path === '/api/health' || req.path === '/health',
+  });
 
-// Apply rate limiting only to API routes (not health checks)
-app.use('/api/', (req, res, next) => {
-  // Skip rate limiting for health endpoint
-  if (req.path === '/health') {
-    return next();
-  }
-  return limiter(req, res, next);
-});
+  // Apply rate limiting only to API routes (not health checks)
+  app.use('/api/', (req, res, next) => {
+    if (req.path === '/health') {
+      return next();
+    }
+    return limiter(req, res, next);
+  });
+} else {
+  // In serverless, rate limiting is handled by Vercel's built-in protection
+  console.log('Rate limiting disabled in serverless environment (handled by Vercel)');
+}
 
 // Routes
 app.use('/api/auth', authRoutes);
