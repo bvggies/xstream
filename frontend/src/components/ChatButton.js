@@ -216,7 +216,7 @@ const ChatButton = () => {
   const sendMessage = async (e) => {
     e.preventDefault();
     const messageText = inputMessage.trim();
-    if (!messageText) return;
+    if (!messageText || !user || !user.role) return;
 
     setLoading(true);
     const messageToSend = messageText; // Store before clearing
@@ -304,7 +304,7 @@ const ChatButton = () => {
             className="fixed bottom-24 right-6 z-50 w-[500px] h-[600px] bg-dark-800 rounded-2xl shadow-2xl border border-dark-700 flex overflow-hidden"
           >
             {/* Admin: User List Sidebar */}
-            {user.role === 'ADMIN' && (
+            {user && user.role === 'ADMIN' && (
               <div className="w-1/3 border-r border-dark-700 bg-dark-900 flex flex-col">
                 {/* Search Bar */}
                 <div className="p-3 border-b border-dark-700">
@@ -429,10 +429,10 @@ const ChatButton = () => {
                   <div>
                     <FiMessageCircle className="w-12 h-12 mx-auto mb-3 text-dark-600" />
                     <p className="text-dark-400">
-                      {user.role === 'ADMIN' ? 'No user messages yet' : 'No messages yet'}
+                      {user && user.role === 'ADMIN' ? 'No user messages yet' : 'No messages yet'}
                     </p>
                     <p className="text-dark-500 text-sm mt-1">
-                      {user.role === 'ADMIN' ? 'Waiting for user messages...' : 'Start a conversation'}
+                      {user && user.role === 'ADMIN' ? 'Waiting for user messages...' : 'Start a conversation'}
                     </p>
                   </div>
                 </div>
