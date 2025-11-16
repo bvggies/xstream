@@ -31,8 +31,10 @@ export const AuthProvider = ({ children }) => {
         initSocket();
       }
     } catch (error) {
+      // If /auth/me fails, user is not authenticated
       setUser(null);
     } finally {
+      // Always set loading to false after checkAuth completes
       setLoading(false);
     }
   };
@@ -41,6 +43,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await axiosInstance.post('/auth/login', { email, password });
       setUser(response.data.user);
+      setLoading(false); // Ensure loading is false after successful login
       initSocket();
       return { 
         success: true, 
@@ -48,6 +51,7 @@ export const AuthProvider = ({ children }) => {
         redirectTo: response.data.redirectTo || (response.data.user.role === 'ADMIN' ? '/admin' : '/dashboard')
       };
     } catch (error) {
+      setLoading(false); // Ensure loading is false even on error
       return {
         success: false,
         error: error.response?.data?.error || 'Login failed',
@@ -59,6 +63,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await axiosInstance.post('/auth/register', userData);
       setUser(response.data.user);
+      setLoading(false); // Ensure loading is false after successful registration
       initSocket();
       return { 
         success: true, 
@@ -67,6 +72,7 @@ export const AuthProvider = ({ children }) => {
       };
     } catch (error) {
       console.error('Registration error:', error);
+      setLoading(false); // Ensure loading is false even on error
       const errorMessage = error.response?.data?.error 
         || error.response?.data?.errors?.[0]?.msg
         || error.message 
