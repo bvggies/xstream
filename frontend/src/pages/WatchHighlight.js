@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import axiosInstance from '../utils/axios';
 import HighlightPlayer from '../components/HighlightPlayer';
 import HighlightCard from '../components/HighlightCard';
-import { FiArrowLeft, FiShare2, FiCopy, FiEye, FiCalendar, FiTag, FiTrendingUp, FiBarChart2, FiDownload, FiBookmark, FiBookmarkCheck } from 'react-icons/fi';
+import { FiArrowLeft, FiShare2, FiCopy, FiEye, FiCalendar, FiTag, FiTrendingUp, FiBarChart2, FiDownload, FiBookmark, FiCheck } from 'react-icons/fi';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import SkeletonLoader from '../components/SkeletonLoader';
@@ -173,7 +173,14 @@ const WatchHighlight = () => {
                     }`}
                     title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
                   >
-                    {isBookmarked ? <FiBookmarkCheck size={20} /> : <FiBookmark size={20} />}
+                    {isBookmarked ? (
+                      <div className="relative">
+                        <FiBookmark size={20} />
+                        <FiCheck size={12} className="absolute -top-1 -right-1 text-primary-500" />
+                      </div>
+                    ) : (
+                      <FiBookmark size={20} />
+                    )}
                   </button>
                   <button
                     onClick={downloadVideo}
