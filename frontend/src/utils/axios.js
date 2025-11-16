@@ -29,7 +29,9 @@ const axiosInstance = axios.create({
 // Request interceptor
 axiosInstance.interceptors.request.use(
   (config) => {
-    console.log('Making request to:', config.baseURL + config.url); // Debug log
+    const fullUrl = config.baseURL + config.url;
+    console.log('Making request to:', fullUrl); // Debug log
+    console.log('Method:', config.method?.toUpperCase()); // Debug log
     return config;
   },
   (error) => {
@@ -40,15 +42,27 @@ axiosInstance.interceptors.request.use(
 
 // Response interceptor
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('Response received:', response.status, response.config.url);
+    return response;
+  },
   async (error) => {
     console.error('Response error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      response: error.response?.status,
+      responseData: error.response?.data,
+      requestURL: error.config?.url,
+      baseURL: error.config?.baseURL,
+    });
     
     // Network error handling
     if (!error.response) {
       console.error('Network Error - No response from server');
       console.error('Request URL:', error.config?.url);
       console.error('Base URL:', error.config?.baseURL);
+      console.error('Full URL would be:', error.config?.baseURL + error.config?.url);
       
       // Show more helpful error message
       const backendUrl = error.config?.baseURL || API_URL;
