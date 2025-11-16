@@ -9,6 +9,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "test:db": "node scripts/test-connection.js",
     "seed": "node scripts/seed.js",
     "create-admin": "node scripts/create-admin.js"
   },
