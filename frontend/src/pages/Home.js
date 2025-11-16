@@ -69,14 +69,23 @@ const Home = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const liveMatches = Array.isArray(matches) ? matches.filter((m) => m.status === 'LIVE') : [];
+  const liveMatches = Array.isArray(matches) 
+    ? matches.filter((m) => m && m.status === 'LIVE')
+    : [];
   const upcomingMatches = Array.isArray(matches) 
-    ? matches.filter((m) => m.status === 'UPCOMING').slice(0, 6)
+    ? matches.filter((m) => m && m.status === 'UPCOMING' && m.matchDate).slice(0, 6)
     : [];
   
   // Sort upcoming matches by date
   if (upcomingMatches.length > 0) {
-    upcomingMatches.sort((a, b) => new Date(a.matchDate) - new Date(b.matchDate));
+    try {
+      upcomingMatches.sort((a, b) => {
+        if (!a.matchDate || !b.matchDate) return 0;
+        return new Date(a.matchDate) - new Date(b.matchDate);
+      });
+    } catch (e) {
+      console.error('Error sorting matches:', e);
+    }
   }
 
   return (
@@ -282,9 +291,10 @@ const Home = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {upcomingMatches.map((match, index) => (
-                <MatchCard key={match.id} match={match} index={index} />
-              ))}
+              {upcomingMatches.map((match, index) => {
+                if (!match || !match.id) return null;
+                return <MatchCard key={match.id} match={match} index={index} />;
+              })}
             </div>
           )}
 
@@ -349,7 +359,21 @@ const Home = () => {
 };
 
 const MatchCard = ({ match, index, isLive = false }) => {
-  const matchDate = new Date(match.matchDate);
+  if (!match || !match.matchDate) {
+    return null; // Don't render if match data is invalid
+  }
+  
+  let matchDate;
+  try {
+    matchDate = new Date(match.matchDate);
+    if (isNaN(matchDate.getTime())) {
+      return null; // Invalid date
+    }
+  } catch (e) {
+    console.error('Invalid match date:', match.matchDate);
+    return null;
+  }
+  
   const isUpcoming = match.status === 'UPCOMING';
 
   return (
