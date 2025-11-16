@@ -3,13 +3,76 @@ const { getIO } = require('../utils/socketInstance');
 
 const getChatHistory = async (req, res, next) => {
   try {
-    const messages = await prisma.chatMessage.findMany({
-      where: { userId: req.user.id },
-      orderBy: { createdAt: 'asc' },
-      take: 100,
-    });
+    // If admin, get all messages grouped by user
+    // If regular user, get only their messages
+    if (req.user.role === 'ADMIN') {
+      // Get all unique user IDs who have sent messages
+      const userMessages = await prisma.chatMessage.findMany({
+        where: {
+          isAdmin: false, // Only user messages
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
 
-    res.json({ messages });
+      // Group messages by user
+      const messagesByUser = {};
+      userMessages.forEach((msg) => {
+        if (!messagesByUser[msg.userId]) {
+          messagesByUser[msg.userId] = {
+            userId: msg.userId,
+            username: msg.user.username,
+            email: msg.user.email,
+            messages: [],
+          };
+        }
+        messagesByUser[msg.userId].messages.push(msg);
+      });
+
+      // Also get admin replies
+      const adminMessages = await prisma.chatMessage.findMany({
+        where: {
+          isAdmin: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      // Add admin messages to respective user conversations
+      adminMessages.forEach((msg) => {
+        if (messagesByUser[msg.userId]) {
+          messagesByUser[msg.userId].messages.push(msg);
+        }
+      });
+
+      // Sort messages within each conversation
+      Object.keys(messagesByUser).forEach((userId) => {
+        messagesByUser[userId].messages.sort(
+          (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+        );
+      });
+
+      res.json({ 
+        messages: Object.values(messagesByUser),
+        isAdmin: true 
+      });
+    } else {
+      // Regular user - get only their messages
+      const messages = await prisma.chatMessage.findMany({
+        where: { userId: req.user.id },
+        orderBy: { createdAt: 'asc' },
+        take: 100,
+      });
+
+      res.json({ messages, isAdmin: false });
+    }
   } catch (error) {
     next(error);
   }

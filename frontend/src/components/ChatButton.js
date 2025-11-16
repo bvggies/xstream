@@ -42,7 +42,26 @@ const ChatButton = () => {
   const fetchChatHistory = async () => {
     try {
       const response = await axiosInstance.get('/chat/history');
-      setMessages(response.data.messages || []);
+      if (user.role === 'ADMIN' && response.data.isAdmin) {
+        // Admin view - messages are grouped by user
+        // For now, flatten all messages from all users
+        const allMessages = [];
+        if (response.data.messages) {
+          response.data.messages.forEach((userChat) => {
+            userChat.messages.forEach((msg) => {
+              allMessages.push({
+                ...msg,
+                userId: userChat.userId,
+                username: userChat.username,
+              });
+            });
+          });
+        }
+        setMessages(allMessages);
+      } else {
+        // Regular user view
+        setMessages(response.data.messages || []);
+      }
     } catch (error) {
       console.error('Failed to fetch chat history:', error);
     }
@@ -85,12 +104,6 @@ const ChatButton = () => {
     const messageText = inputMessage.trim();
     if (!messageText) return;
 
-    // Check if socket is available
-    if (!socket) {
-      toast.error('Connection not available. Please refresh the page.');
-      return;
-    }
-
     setLoading(true);
     const messageToSend = messageText; // Store before clearing
     
@@ -98,9 +111,14 @@ const ChatButton = () => {
       // Clear input immediately for better UX
       setInputMessage('');
       
-      const response = await axiosInstance.post('/chat/send', {
+      const requestData = {
         message: messageToSend,
-      });
+      };
+
+      // If admin, we need to specify targetUserId (for now, send to all)
+      // TODO: Add user selection UI for admin
+      
+      const response = await axiosInstance.post('/chat/send', requestData);
 
       // Add message to local state (message is already saved via HTTP)
       setMessages((prev) => [...prev, response.data.message]);
@@ -112,6 +130,11 @@ const ChatButton = () => {
           message: messageToSend,
         });
       }
+
+      // Refresh chat history to get latest messages
+      setTimeout(() => {
+        fetchChatHistory();
+      }, 500);
     } catch (error) {
       // Restore input message on error
       setInputMessage(messageToSend);
@@ -165,8 +188,12 @@ const ChatButton = () => {
                   <FiMessageCircle className="text-white" />
                 </div>
                 <div>
-                  <h3 className="text-white font-bold">Support Chat</h3>
-                  <p className="text-white/80 text-xs">We'll respond soon</p>
+                  <h3 className="text-white font-bold">
+                    {user.role === 'ADMIN' ? 'Admin Chat' : 'Support Chat'}
+                  </h3>
+                  <p className="text-white/80 text-xs">
+                    {user.role === 'ADMIN' ? 'View all user messages' : "We'll respond soon"}
+                  </p>
                 </div>
               </div>
               <button
