@@ -18,6 +18,13 @@ const {
   getAuditLogs,
   getAnalytics,
 } = require('../controllers/adminController');
+const {
+  getAllHighlights,
+  createHighlight,
+  updateHighlight,
+  deleteHighlight,
+  toggleVisibility,
+} = require('../controllers/adminHighlightController');
 const { authenticate, authorizeAdmin } = require('../middleware/auth');
 const { upload } = require('../middleware/upload');
 const { body } = require('express-validator');
@@ -62,6 +69,18 @@ router.put('/reports/:id', [
 
 router.get('/audit-logs', getAuditLogs);
 router.get('/analytics', getAnalytics);
+
+// Highlights routes
+router.get('/highlights', getAllHighlights);
+router.post('/highlights', [
+  body('title').notEmpty(),
+  body('league').notEmpty(),
+  body('thumbnailUrl').notEmpty().isURL(),
+  body('videoLinks').isArray().notEmpty(),
+], validate, createHighlight);
+router.patch('/highlights/:id', updateHighlight);
+router.delete('/highlights/:id', deleteHighlight);
+router.patch('/highlights/:id/toggle', toggleVisibility);
 
 module.exports = router;
 

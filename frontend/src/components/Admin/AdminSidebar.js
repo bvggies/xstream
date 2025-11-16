@@ -7,6 +7,7 @@ import {
   FiUsers,
   FiFlag,
   FiBarChart2,
+  FiFilm,
   FiLogOut,
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
@@ -18,6 +19,7 @@ const AdminSidebar = () => {
   const menuItems = [
     { path: '/admin', label: 'Dashboard', icon: FiLayout },
     { path: '/admin/matches', label: 'Matches', icon: FiPlay },
+    { path: '/admin/highlights', label: 'Highlights', icon: FiFilm },
     { path: '/admin/users', label: 'Users', icon: FiUsers },
     { path: '/admin/reports', label: 'Reports', icon: FiFlag },
     { path: '/admin/analytics', label: 'Analytics', icon: FiBarChart2 },

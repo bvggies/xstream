@@ -17,8 +17,11 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Matches from './pages/Matches';
 import WatchMatch from './pages/WatchMatch';
+import Highlights from './pages/Highlights';
+import WatchHighlight from './pages/WatchHighlight';
 import AdminDashboard from './pages/Admin/Dashboard';
 import AdminMatches from './pages/Admin/Matches';
+import AdminHighlights from './pages/Admin/Highlights';
 import AdminUsers from './pages/Admin/Users';
 import AdminReports from './pages/Admin/Reports';
 import AdminAnalytics from './pages/Admin/Analytics';
@@ -54,6 +57,8 @@ function App() {
               <Route path="/reset-password/:token" element={<ResetPassword />} />
               <Route path="/verify-email/:token" element={<VerifyEmail />} />
               <Route path="/matches" element={<Matches />} />
+              <Route path="/highlights" element={<Highlights />} />
+              <Route path="/highlights/:id" element={<WatchHighlight />} />
               <Route
                 path="/watch/:id"
                 element={
@@ -91,6 +96,14 @@ function App() {
                 element={
                   <ProtectedRoute requireAdmin>
                     <AdminMatches />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/highlights"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <AdminHighlights />
                   </ProtectedRoute>
                 }
               />

@@ -71,6 +71,12 @@ const Navbar = () => {
             >
               Matches
             </Link>
+            <Link
+              to="/highlights"
+              className="text-dark-300 hover:text-white transition-colors"
+            >
+              Highlights
+            </Link>
             {user && (
               <>
                 <Link
@@ -256,6 +262,13 @@ const Navbar = () => {
               onClick={() => setMobileMenuOpen(false)}
             >
               Matches
+            </Link>
+            <Link
+              to="/highlights"
+              className="block text-dark-300 hover:text-white"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Highlights
             </Link>
             {user && (
               <>

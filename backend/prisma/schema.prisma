@@ -56,8 +56,28 @@ model Match {
   streamingLinks StreamingLink[]
   watchHistory   WatchHistory[]
   reports        Report[]
+  highlights     Highlight[]
 
   @@map("matches")
+}
+
+model Highlight {
+  id           String   @id @default(uuid())
+  title        String
+  description  String?
+  matchId      String?  @map("match_id")
+  league       String
+  thumbnailUrl String   @map("thumbnail_url")
+  videoLinks   String[] @map("video_links") // Array of video sources
+  duration     Int?     // Duration in seconds
+  views        Int      @default(0)
+  isVisible    Boolean  @default(true) @map("is_visible")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  match Match? @relation(fields: [matchId], references: [id], onDelete: SetNull)
+
+  @@map("highlights")
 }
 
 model StreamingLink {

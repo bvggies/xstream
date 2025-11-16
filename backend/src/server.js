@@ -14,6 +14,7 @@ try {
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
 const matchRoutes = require('./routes/match');
+const highlightRoutes = require('./routes/highlight');
 const adminRoutes = require('./routes/admin');
 const chatRoutes = require('./routes/chat');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -113,6 +114,7 @@ if (!process.env.VERCEL) {
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/matches', matchRoutes);
+app.use('/api/highlights', highlightRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
 
