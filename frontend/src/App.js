@@ -24,6 +24,7 @@ import AdminReports from './pages/Admin/Reports';
 import AdminAnalytics from './pages/Admin/Analytics';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from './components/ErrorBoundary';
+import ChatButton from './components/ChatButton';
 
 import AOS from 'aos';
 import 'aos/dist/aos.css';
@@ -44,6 +45,7 @@ function App() {
           <div className="min-h-screen flex flex-col">
             <Navbar />
             <main className="flex-grow pt-16">
+              <ChatButton />
               <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />

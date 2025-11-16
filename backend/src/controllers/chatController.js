@@ -32,8 +32,44 @@ const sendMessage = async (req, res, next) => {
   }
 };
 
+const getUnreadCount = async (req, res, next) => {
+  try {
+    const count = await prisma.chatMessage.count({
+      where: {
+        userId: req.user.id,
+        isSeen: false,
+        isAdmin: true, // Only count admin messages as unread for users
+      },
+    });
+
+    res.json({ count });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const markMessagesAsSeen = async (req, res, next) => {
+  try {
+    await prisma.chatMessage.updateMany({
+      where: {
+        userId: req.user.id,
+        isSeen: false,
+      },
+      data: {
+        isSeen: true,
+      },
+    });
+
+    res.json({ message: 'Messages marked as seen' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getChatHistory,
   sendMessage,
+  getUnreadCount,
+  markMessagesAsSeen,
 };
 
