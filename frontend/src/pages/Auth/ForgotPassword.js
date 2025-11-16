@@ -46,7 +46,7 @@ const ForgotPassword = () => {
             <p className="text-dark-400">
               {sent
                 ? 'Check your email for reset instructions'
-                : 'Enter your email and we'll send you a reset link'}
+                : "Enter your email and we'll send you a reset link"}
             </p>
           </div>
 
