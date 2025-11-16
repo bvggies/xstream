@@ -81,16 +81,24 @@ const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
+    console.log('Login attempt for email:', email);
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
     // Find user
     const user = await prisma.user.findUnique({
       where: { email },
     });
 
     if (!user) {
+      console.log('Login failed: User not found for email:', email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     if (user.isBanned) {
+      console.log('Login failed: User is banned:', email);
       return res.status(403).json({ error: 'Account has been banned' });
     }
 
@@ -98,8 +106,11 @@ const login = async (req, res, next) => {
     const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (!isValidPassword) {
+      console.log('Login failed: Invalid password for email:', email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+
+    console.log('Login successful for user:', user.id, user.email);
 
     // Generate tokens
     const accessToken = generateAccessToken({ userId: user.id, role: user.role });
