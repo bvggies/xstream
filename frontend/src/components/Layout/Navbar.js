@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { motion } from 'framer-motion';
-import { FiMenu, FiX, FiUser, FiLogOut, FiSettings, FiHome, FiBell } from 'react-icons/fi';
+import { FiMenu, FiX, FiUser, FiLogOut, FiSettings, FiHome, FiBell, FiShield, FiLayout } from 'react-icons/fi';
 import axiosInstance from '../../utils/axios';
 
 const Navbar = () => {
@@ -81,16 +81,18 @@ const Navbar = () => {
               <>
                 <Link
                   to="/dashboard"
-                  className="text-dark-300 hover:text-white transition-colors"
+                  className="flex items-center space-x-2 px-4 py-2 bg-dark-800 hover:bg-dark-700 rounded-lg text-white transition-all border border-dark-700 hover:border-primary-500/50"
                 >
-                  Dashboard
+                  <FiLayout className="w-4 h-4" />
+                  <span className="font-medium">Dashboard</span>
                 </Link>
                 {user.role === 'ADMIN' && (
                   <Link
                     to="/admin"
-                    className="text-dark-300 hover:text-white transition-colors"
+                    className="flex items-center space-x-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 rounded-lg text-white transition-all shadow-lg hover:shadow-primary-500/50"
                   >
-                    Admin
+                    <FiShield className="w-4 h-4" />
+                    <span className="font-medium">Admin</span>
                   </Link>
                 )}
               </>
@@ -274,14 +276,15 @@ const Navbar = () => {
               <>
                 <Link
                   to="/dashboard"
-                  className="block text-dark-300 hover:text-white"
+                  className="flex items-center space-x-2 px-4 py-2 bg-dark-800 hover:bg-dark-700 rounded-lg text-white transition-all border border-dark-700 hover:border-primary-500/50 mb-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Dashboard
+                  <FiLayout className="w-4 h-4" />
+                  <span className="font-medium">Dashboard</span>
                 </Link>
                 <Link
                   to="/profile"
-                  className="block text-dark-300 hover:text-white"
+                  className="block text-dark-300 hover:text-white py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Profile
@@ -289,10 +292,11 @@ const Navbar = () => {
                 {user.role === 'ADMIN' && (
                   <Link
                     to="/admin"
-                    className="block text-dark-300 hover:text-white"
+                    className="flex items-center space-x-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 rounded-lg text-white transition-all shadow-lg hover:shadow-primary-500/50 mt-2"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    Admin
+                    <FiShield className="w-4 h-4" />
+                    <span className="font-medium">Admin</span>
                   </Link>
                 )}
                 <button
