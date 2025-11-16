@@ -156,6 +156,9 @@ app.use(errorHandler);
 // For Vercel serverless functions
 module.exports = app;
 
+// Store io instance for use in controllers
+const { setIO } = require('./utils/socketInstance');
+
 // For local development with Socket.io
 if (process.env.NODE_ENV !== 'production' && require.main === module) {
   const { createServer } = require('http');
@@ -172,6 +175,7 @@ if (process.env.NODE_ENV !== 'production' && require.main === module) {
     },
   });
 
+  setIO(io); // Store io instance
   initializeSocket(io);
 
   const PORT = process.env.PORT || 5000;

@@ -102,16 +102,15 @@ const ChatButton = () => {
         message: messageToSend,
       });
 
-      // Add message to local state
+      // Add message to local state (message is already saved via HTTP)
       setMessages((prev) => [...prev, response.data.message]);
 
-      // Emit socket event
+      // Socket emit is optional - HTTP endpoint will handle broadcasting
+      // But we can emit for real-time updates if socket is connected
       if (socket && socket.connected) {
         socket.emit('send_message', {
           message: messageToSend,
         });
-      } else {
-        console.warn('Socket not connected, message saved but not broadcasted');
       }
     } catch (error) {
       // Restore input message on error

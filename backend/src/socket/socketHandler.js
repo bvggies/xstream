@@ -1,18 +1,29 @@
 const prisma = require('../utils/prisma');
 const { verifyAccessToken } = require('../utils/jwt');
 
+const cookie = require('cookie');
+
 const initializeSocket = (io) => {
   io.use(async (socket, next) => {
     try {
-      const token = socket.handshake.auth.token || socket.handshake.headers.cookie?.split('accessToken=')[1]?.split(';')[0];
+      // Try to get token from auth first, then from cookies
+      let token = socket.handshake.auth?.token;
+      
+      // Parse cookies from handshake headers
+      if (!token && socket.handshake.headers.cookie) {
+        const cookies = cookie.parse(socket.handshake.headers.cookie);
+        token = cookies.accessToken;
+      }
 
       if (!token) {
+        console.log('Socket auth failed: No token found');
         return next(new Error('Authentication error'));
       }
 
       const decoded = verifyAccessToken(token);
 
       if (!decoded) {
+        console.log('Socket auth failed: Invalid token');
         return next(new Error('Invalid token'));
       }
 
