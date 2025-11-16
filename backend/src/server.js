@@ -53,8 +53,16 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
 
-// Health check
+// Health check - handle both /api/health and /health
 app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || 'development'
+  });
+});
+
+app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
@@ -67,7 +75,12 @@ app.get('/', (req, res) => {
   res.json({ 
     message: 'Xstream API',
     status: 'running',
-    version: '1.0.0'
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      matches: '/api/matches'
+    }
   });
 });
 
