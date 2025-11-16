@@ -105,11 +105,26 @@ const sendMessage = async (req, res, next) => {
       }
     }
 
+    // Get user info for the message
+    const userInfo = await prisma.user.findUnique({
+      where: { id: messageUserId },
+      select: { id: true, username: true, email: true },
+    });
+
     const chatMessage = await prisma.chatMessage.create({
       data: {
         userId: messageUserId, // Message belongs to the target user's conversation
         message,
         isAdmin: req.user.role === 'ADMIN',
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+          },
+        },
       },
     });
 
@@ -117,43 +132,39 @@ const sendMessage = async (req, res, next) => {
     if (io) {
       if (req.user.role === 'ADMIN') {
         // Admin sending to specific user
-        io.to(`user:${messageUserId}`).emit('new_message', {
+        const messageData = {
           id: chatMessage.id,
           userId: messageUserId,
+          username: userInfo?.username,
           message: chatMessage.message,
           isAdmin: true,
           createdAt: chatMessage.createdAt,
-          username: req.user.username,
-        });
+        };
         
-        // Also notify admin room
-        io.to('admin').emit('new_message', {
-          id: chatMessage.id,
-          userId: messageUserId,
-          message: chatMessage.message,
-          isAdmin: true,
-          createdAt: chatMessage.createdAt,
-          username: req.user.username,
-        });
+        // Send to the user
+        io.to(`user:${messageUserId}`).emit('new_message', messageData);
+        
+        // Also notify admin room so all admins see the update
+        io.to('admin').emit('new_message', messageData);
       } else {
         // User sending to admin - broadcast to all admins
-        io.to('admin').emit('new_message', {
+        const messageData = {
           id: chatMessage.id,
           userId: req.user.id,
           username: req.user.username,
+          email: req.user.email,
           message: chatMessage.message,
           isAdmin: false,
           createdAt: chatMessage.createdAt,
-        });
+        };
+        
+        // Broadcast to admin room
+        io.to('admin').emit('new_message', messageData);
         
         // Also emit to sender's room for confirmation
         io.to(`user:${req.user.id}`).emit('new_message', {
-          id: chatMessage.id,
-          userId: req.user.id,
-          message: chatMessage.message,
+          ...messageData,
           isAdmin: false,
-          createdAt: chatMessage.createdAt,
-          username: req.user.username,
         });
       }
     }
