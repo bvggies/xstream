@@ -20,16 +20,30 @@ const Dashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [historyRes, notificationsRes] = await Promise.all([
+      const [historyRes, notificationsRes] = await Promise.allSettled([
         axiosInstance.get('/user/watch-history'),
         axiosInstance.get('/user/notifications'),
       ]);
 
-      setWatchHistory(historyRes.data.history || []);
-      setNotifications(notificationsRes.data.notifications || []);
+      if (historyRes.status === 'fulfilled') {
+        setWatchHistory(historyRes.value.data.history || []);
+      } else {
+        console.error('Failed to fetch watch history:', historyRes.reason);
+        setWatchHistory([]);
+      }
+
+      if (notificationsRes.status === 'fulfilled') {
+        setNotifications(notificationsRes.value.data.notifications || []);
+      } else {
+        console.error('Failed to fetch notifications:', notificationsRes.reason);
+        setNotifications([]);
+      }
+
       setFavoriteLeagues(user?.favoriteLeagues || []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
+      setWatchHistory([]);
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
@@ -46,6 +60,14 @@ const Dashboard = () => {
     }
   };
 
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-dark-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-dark-900 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -55,7 +77,7 @@ const Dashboard = () => {
           className="mb-8"
         >
           <h1 className="text-4xl font-bold text-white mb-2">
-            Welcome back, {user?.username}!
+            Welcome back, {user?.username || 'User'}!
           </h1>
           <p className="text-dark-400">Manage your account and preferences</p>
         </motion.div>

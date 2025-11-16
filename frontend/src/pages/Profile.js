@@ -21,6 +21,7 @@ const Profile = () => {
   });
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
@@ -31,6 +32,13 @@ const Profile = () => {
         email: user.email || '',
       });
       setAvatarPreview(user.avatar);
+      setPageLoading(false);
+    } else {
+      // Wait a bit for user to load
+      const timer = setTimeout(() => {
+        setPageLoading(false);
+      }, 2000);
+      return () => clearTimeout(timer);
     }
   }, [user]);
 
@@ -108,6 +116,14 @@ const Profile = () => {
     { id: 'security', label: 'Security', icon: FiShield },
     { id: 'notifications', label: 'Notifications', icon: FiBell },
   ];
+
+  if (pageLoading && !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-dark-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-dark-900 py-8">
