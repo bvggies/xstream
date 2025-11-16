@@ -61,6 +61,18 @@ const initializeSocket = (io) => {
       socket.join('admin');
     }
 
+    // Handle joining match chat room
+    socket.on('join_match_chat', (matchId) => {
+      socket.join(`match:${matchId}`);
+      console.log(`User ${socket.username} joined match chat: ${matchId}`);
+    });
+
+    // Handle leaving match chat room
+    socket.on('leave_match_chat', (matchId) => {
+      socket.leave(`match:${matchId}`);
+      console.log(`User ${socket.username} left match chat: ${matchId}`);
+    });
+
     // Handle sending messages
     socket.on('send_message', async (data) => {
       try {

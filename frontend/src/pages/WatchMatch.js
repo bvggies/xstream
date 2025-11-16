@@ -5,7 +5,7 @@ import axiosInstance from '../utils/axios';
 import toast from 'react-hot-toast';
 import Hls from 'hls.js';
 import { FiPlay, FiFlag, FiMessageCircle, FiClock, FiUsers, FiCalendar } from 'react-icons/fi';
-import Chat from '../components/Chat';
+import MatchChat from '../components/MatchChat';
 import { calculateTimeRemaining, formatCountdown, canAccessMatch } from '../utils/countdown';
 import { format } from 'date-fns';
 
@@ -15,7 +15,6 @@ const WatchMatch = () => {
   const [match, setMatch] = useState(null);
   const [selectedLink, setSelectedLink] = useState(null);
   const [hls, setHls] = useState(null);
-  const [showChat, setShowChat] = useState(false);
   const [loading, setLoading] = useState(true);
   const [countdown, setCountdown] = useState(null);
   const [accessGranted, setAccessGranted] = useState(false);
@@ -561,25 +560,8 @@ const WatchMatch = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Chat Toggle */}
-            <button
-              onClick={() => setShowChat(!showChat)}
-              className="w-full btn-primary flex items-center justify-center"
-            >
-              <FiMessageCircle className="mr-2" />
-              {showChat ? 'Hide' : 'Show'} Chat
-            </button>
-
-            {/* Chat */}
-            {showChat && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="card p-0"
-              >
-                <Chat />
-              </motion.div>
-            )}
+            {/* Match Chat */}
+            <MatchChat matchId={id} />
 
             {/* Stream Links List */}
             {match.streamingLinks && match.streamingLinks.length > 1 && (

@@ -10,6 +10,8 @@ const ChatButton = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
+  const [userConversations, setUserConversations] = useState([]); // For admin: grouped by user
+  const [selectedUserId, setSelectedUserId] = useState(null); // For admin: selected user to chat with
   const [inputMessage, setInputMessage] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -41,31 +43,38 @@ const ChatButton = () => {
   }, [user, socket]);
 
   useEffect(() => {
-    if (isOpen && socket) {
-      // Mark messages as seen when chat opens
+    if (isOpen && socket && selectedUserId) {
+      // Mark messages as seen when chat opens or user changes
       markMessagesAsSeen();
     }
-  }, [isOpen]);
+  }, [isOpen, selectedUserId]);
 
   const fetchChatHistory = async () => {
     try {
       const response = await axiosInstance.get('/chat/history');
       if (user.role === 'ADMIN' && response.data.isAdmin) {
         // Admin view - messages are grouped by user
-        // For now, flatten all messages from all users
-        const allMessages = [];
-        if (response.data.messages) {
-          response.data.messages.forEach((userChat) => {
-            userChat.messages.forEach((msg) => {
-              allMessages.push({
-                ...msg,
-                userId: userChat.userId,
-                username: userChat.username,
-              });
+        setUserConversations(response.data.messages || []);
+        // Set selected user to first user with messages, or most recent
+        if (response.data.messages && response.data.messages.length > 0) {
+          if (!selectedUserId) {
+            // Find user with most recent message
+            let mostRecent = response.data.messages[0];
+            response.data.messages.forEach((conv) => {
+              const lastMsg = conv.messages[conv.messages.length - 1];
+              const mostRecentLastMsg = mostRecent.messages[mostRecent.messages.length - 1];
+              if (new Date(lastMsg.createdAt) > new Date(mostRecentLastMsg.createdAt)) {
+                mostRecent = conv;
+              }
             });
-          });
+            setSelectedUserId(mostRecent.userId);
+            setMessages(mostRecent.messages || []);
+          } else {
+            // Update messages for selected user
+            const selectedConv = response.data.messages.find((c) => c.userId === selectedUserId);
+            setMessages(selectedConv?.messages || []);
+          }
         }
-        setMessages(allMessages);
       } else {
         // Regular user view
         setMessages(response.data.messages || []);
@@ -85,12 +94,54 @@ const ChatButton = () => {
   };
 
   const handleNewMessage = (message) => {
-    setMessages((prev) => [...prev, message]);
-    if (!isOpen) {
-      setUnreadCount((prev) => prev + 1);
-      toast.success('New message from support');
+    if (user.role === 'ADMIN') {
+      // Update the conversation for the user who sent the message
+      setUserConversations((prev) => {
+        const updated = prev.map((conv) => {
+          if (conv.userId === message.userId) {
+            // Check if message already exists
+            if (!conv.messages.some((m) => m.id === message.id)) {
+              return { ...conv, messages: [...conv.messages, message] };
+            }
+          }
+          return conv;
+        });
+        // If user not found, create new conversation
+        if (!updated.some((c) => c.userId === message.userId)) {
+          updated.push({
+            userId: message.userId,
+            username: message.username,
+            email: '',
+            messages: [message],
+          });
+        }
+        return updated;
+      });
+
+      // If this message is for the currently selected user, add it to messages
+      if (selectedUserId === message.userId) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === message.id)) return prev;
+          return [...prev, message];
+        });
+      } else {
+        // Increment unread count if chat is not open or different user
+        if (!isOpen || selectedUserId !== message.userId) {
+          setUnreadCount((prev) => prev + 1);
+        }
+      }
     } else {
-      markMessagesAsSeen();
+      // Regular user
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === message.id)) return prev;
+        return [...prev, message];
+      });
+      if (!isOpen) {
+        setUnreadCount((prev) => prev + 1);
+        toast.success('New message from support');
+      } else {
+        markMessagesAsSeen();
+      }
     }
   };
 
@@ -123,16 +174,15 @@ const ChatButton = () => {
         message: messageToSend,
       };
 
-      // If admin, try to get targetUserId from the most recent user message
+      // If admin, use selectedUserId
       if (user.role === 'ADMIN') {
-        // Find the most recent user message to reply to
-        const recentUserMessage = messages
-          .filter(m => !m.isAdmin)
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
-        
-        if (recentUserMessage && recentUserMessage.userId) {
-          requestData.targetUserId = recentUserMessage.userId;
+        if (!selectedUserId) {
+          toast.error('Please select a user to message');
+          setInputMessage(messageToSend);
+          setLoading(false);
+          return;
         }
+        requestData.targetUserId = selectedUserId;
       }
       
       const response = await axiosInstance.post('/chat/send', requestData);
@@ -196,33 +246,83 @@ const ChatButton = () => {
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="fixed bottom-24 right-6 z-50 w-96 h-[600px] bg-dark-800 rounded-2xl shadow-2xl border border-dark-700 flex flex-col overflow-hidden"
+            className="fixed bottom-24 right-6 z-50 w-[500px] h-[600px] bg-dark-800 rounded-2xl shadow-2xl border border-dark-700 flex overflow-hidden"
           >
-            {/* Header */}
-            <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-4 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <FiMessageCircle className="text-white" />
+            {/* Admin: User List Sidebar */}
+            {user.role === 'ADMIN' && userConversations.length > 0 && (
+              <div className="w-1/3 border-r border-dark-700 bg-dark-900 overflow-y-auto custom-scrollbar">
+                <div className="p-3 border-b border-dark-700">
+                  <h4 className="text-white font-semibold text-sm">Users</h4>
                 </div>
-                <div>
-                  <h3 className="text-white font-bold">
-                    {user.role === 'ADMIN' ? 'Admin Chat' : 'Support Chat'}
-                  </h3>
-                  <p className="text-white/80 text-xs">
-                    {user.role === 'ADMIN' ? 'View all user messages' : "We'll respond soon"}
-                  </p>
+                <div className="divide-y divide-dark-700">
+                  {userConversations.map((conv) => {
+                    const lastMessage = conv.messages[conv.messages.length - 1];
+                    const unreadCount = conv.messages.filter((m) => !m.isAdmin && !m.isSeen).length;
+                    return (
+                      <button
+                        key={conv.userId}
+                        onClick={() => {
+                          setSelectedUserId(conv.userId);
+                          setMessages(conv.messages || []);
+                          markMessagesAsSeen();
+                        }}
+                        className={`w-full text-left p-3 hover:bg-dark-800 transition-colors ${
+                          selectedUserId === conv.userId ? 'bg-dark-800 border-l-2 border-primary-500' : ''
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-white font-medium text-sm truncate">{conv.username}</p>
+                          {unreadCount > 0 && (
+                            <span className="bg-primary-500 text-white text-xs rounded-full px-2 py-0.5">
+                              {unreadCount}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-dark-400 text-xs truncate">
+                          {lastMessage?.message || 'No messages'}
+                        </p>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
-              >
-                <FiX className="w-5 h-5" />
-              </button>
-            </div>
+            )}
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-dark-900">
+            {/* Chat Content */}
+            <div className="flex-1 flex flex-col">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-4 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                    <FiMessageCircle className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-bold">
+                      {user.role === 'ADMIN' 
+                        ? selectedUserId 
+                          ? userConversations.find(c => c.userId === selectedUserId)?.username || 'Select User'
+                          : 'Admin Chat'
+                        : 'Support Chat'}
+                    </h3>
+                    <p className="text-white/80 text-xs">
+                      {user.role === 'ADMIN' 
+                        ? selectedUserId 
+                          ? userConversations.find(c => c.userId === selectedUserId)?.email || ''
+                          : 'Select a user to chat'
+                        : "We'll respond soon"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+                >
+                  <FiX className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-dark-900 custom-scrollbar">
               {messages.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-center">
                   <div>
@@ -250,11 +350,6 @@ const ChatButton = () => {
                           : 'bg-dark-700 text-white rounded-bl-none'
                       }`}
                     >
-                      {user.role === 'ADMIN' && !message.isAdmin && message.username && (
-                        <p className="text-xs font-semibold mb-1 opacity-80">
-                          {message.username}
-                        </p>
-                      )}
                       <p className="text-sm">{message.message}</p>
                       <p className={`text-xs mt-1 ${message.isAdmin ? 'text-white/70' : 'text-dark-400'}`}>
                         {new Date(message.createdAt).toLocaleTimeString([], {
@@ -268,8 +363,8 @@ const ChatButton = () => {
               )}
             </div>
 
-            {/* Input */}
-            <form onSubmit={sendMessage} className="p-4 border-t border-dark-700 bg-dark-800">
+              {/* Input */}
+              <form onSubmit={sendMessage} className="p-4 border-t border-dark-700 bg-dark-800">
               <div className="flex space-x-2">
                 <input
                   type="text"
@@ -288,6 +383,7 @@ const ChatButton = () => {
                 </button>
               </div>
             </form>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

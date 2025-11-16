@@ -17,6 +17,7 @@ const matchRoutes = require('./routes/match');
 const highlightRoutes = require('./routes/highlight');
 const adminRoutes = require('./routes/admin');
 const chatRoutes = require('./routes/chat');
+const matchChatRoutes = require('./routes/matchChat');
 const { errorHandler } = require('./middleware/errorHandler');
 const { notFound } = require('./middleware/notFound');
 
@@ -117,6 +118,7 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/highlights', highlightRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/match-chat', matchChatRoutes);
 
 // Health check - handle both /api/health and /health
 app.get('/api/health', (req, res) => {
