@@ -174,7 +174,7 @@ const unbanUser = async (req, res, next) => {
 
 const createMatch = async (req, res, next) => {
   try {
-    const { title, homeTeam, awayTeam, homeTeamLogo, awayTeamLogo, league, leagueLogo, matchDate, status = 'UPCOMING' } = req.body;
+    const { title, homeTeam, awayTeam, homeTeamLogo, awayTeamLogo, league, leagueLogo, matchDate, endTime, status = 'UPCOMING' } = req.body;
 
     const matchData = {
       title,
@@ -185,6 +185,7 @@ const createMatch = async (req, res, next) => {
       league,
       leagueLogo: leagueLogo || null,
       matchDate: new Date(matchDate),
+      endTime: endTime ? new Date(endTime) : null,
       status,
     };
 
@@ -214,7 +215,7 @@ const createMatch = async (req, res, next) => {
 const updateMatch = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { title, homeTeam, awayTeam, homeTeamLogo, awayTeamLogo, league, leagueLogo, matchDate, status } = req.body;
+    const { title, homeTeam, awayTeam, homeTeamLogo, awayTeamLogo, league, leagueLogo, matchDate, endTime, status } = req.body;
 
     const updateData = {};
     if (title) updateData.title = title;
@@ -225,6 +226,7 @@ const updateMatch = async (req, res, next) => {
     if (league) updateData.league = league;
     if (leagueLogo !== undefined) updateData.leagueLogo = leagueLogo || null;
     if (matchDate) updateData.matchDate = new Date(matchDate);
+    if (endTime !== undefined) updateData.endTime = endTime ? new Date(endTime) : null;
     if (status) updateData.status = status;
 
     // Handle file upload (only in non-serverless environments)
@@ -245,6 +247,26 @@ const updateMatch = async (req, res, next) => {
     await auditLog(req.user.id, 'UPDATE_MATCH', 'Match', `Updated match ${id}`, req.ip);
 
     res.json({ message: 'Match updated', match });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const endMatch = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const match = await prisma.match.update({
+      where: { id },
+      data: {
+        status: 'FINISHED',
+        endTime: new Date(),
+      },
+    });
+
+    await auditLog(req.user.id, 'END_MATCH', 'Match', `Ended match ${id}`, req.ip);
+
+    res.json({ message: 'Match ended', match });
   } catch (error) {
     next(error);
   }
@@ -426,6 +448,7 @@ module.exports = {
   unbanUser,
   createMatch,
   updateMatch,
+  endMatch,
   deleteMatch,
   addStreamingLink,
   updateStreamingLink,

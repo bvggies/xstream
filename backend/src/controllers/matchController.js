@@ -6,9 +6,14 @@ const getMatches = async (req, res, next) => {
     const where = {};
 
     if (status) {
-      where.status = status;
+      if (status === 'FINISHED') {
+        // Show finished matches
+        where.status = 'FINISHED';
+      } else {
+        where.status = status;
+      }
     } else {
-      // Default: show LIVE and UPCOMING
+      // Default: show LIVE and UPCOMING (not FINISHED)
       where.status = { in: ['LIVE', 'UPCOMING'] };
     }
 
@@ -16,10 +21,11 @@ const getMatches = async (req, res, next) => {
       where.league = league;
     }
 
-    // Hide expired matches
-    if (status === 'UPCOMING' || !status) {
+    // Hide expired UPCOMING matches, but keep LIVE matches until they're finished
+    if (status === 'UPCOMING' || (!status && where.status.in)) {
       where.matchDate = { gte: new Date() };
     }
+    // LIVE matches stay visible until status is changed to FINISHED
 
     const matches = await prisma.match.findMany({
       where,
@@ -66,6 +72,7 @@ const getMatchById = async (req, res, next) => {
         thumbnail: true,
         status: true,
         matchDate: true,
+        endTime: true,
         streamingLinks: {
           where: { isActive: true },
           select: {

@@ -8,6 +8,7 @@ const {
   unbanUser,
   createMatch,
   updateMatch,
+  endMatch,
   deleteMatch,
   addStreamingLink,
   updateStreamingLink,
@@ -43,6 +44,7 @@ router.post('/matches', upload.single('thumbnail'), [
 ], validate, createMatch);
 
 router.put('/matches/:id', upload.single('thumbnail'), updateMatch);
+router.put('/matches/:id/end', endMatch);
 router.delete('/matches/:id', deleteMatch);
 
 router.post('/matches/:matchId/links', [
