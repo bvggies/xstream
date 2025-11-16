@@ -195,15 +195,30 @@ const getUnreadCount = async (req, res, next) => {
 
 const markMessagesAsSeen = async (req, res, next) => {
   try {
-    await prisma.chatMessage.updateMany({
-      where: {
-        userId: req.user.id,
-        isSeen: false,
-      },
-      data: {
-        isSeen: true,
-      },
-    });
+    if (req.user.role === 'ADMIN') {
+      // Admin: mark all user messages as seen
+      await prisma.chatMessage.updateMany({
+        where: {
+          isAdmin: false, // User messages
+          isSeen: false,
+        },
+        data: {
+          isSeen: true,
+        },
+      });
+    } else {
+      // User: mark their admin messages as seen
+      await prisma.chatMessage.updateMany({
+        where: {
+          userId: req.user.id,
+          isSeen: false,
+          isAdmin: true, // Only admin messages
+        },
+        data: {
+          isSeen: true,
+        },
+      });
+    }
 
     res.json({ message: 'Messages marked as seen' });
   } catch (error) {
