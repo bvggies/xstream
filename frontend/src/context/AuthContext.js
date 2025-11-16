@@ -56,7 +56,11 @@ export const AuthProvider = ({ children }) => {
       const response = await axiosInstance.post('/auth/register', userData);
       setUser(response.data.user);
       initSocket();
-      return { success: true };
+      return { 
+        success: true, 
+        user: response.data.user,
+        redirectTo: response.data.user.role === 'ADMIN' ? '/admin' : '/dashboard'
+      };
     } catch (error) {
       console.error('Registration error:', error);
       const errorMessage = error.response?.data?.error 

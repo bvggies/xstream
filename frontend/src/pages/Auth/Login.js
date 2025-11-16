@@ -19,7 +19,12 @@ const Login = () => {
 
     if (result.success) {
       toast.success('Login successful!');
-      navigate('/dashboard');
+      // Redirect based on user role
+      if (result.user?.role === 'ADMIN') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     } else {
       toast.error(result.error || 'Login failed');
     }

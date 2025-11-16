@@ -52,8 +52,14 @@ const Register = () => {
     });
 
     if (result.success) {
-      toast.success('Registration successful! Please verify your email.');
-      navigate('/login');
+      toast.success('Registration successful!');
+      // Redirect based on user role
+      const userRole = result.user?.role;
+      if (userRole === 'ADMIN') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     } else {
       toast.error(result.error || 'Registration failed');
     }

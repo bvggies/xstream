@@ -36,6 +36,11 @@ const authenticate = async (req, res, next) => {
       return res.status(403).json({ error: 'Account has been banned' });
     }
 
+    // Email verification no longer required
+    // if (!user.isVerified) {
+    //   return res.status(403).json({ error: 'Please verify your email' });
+    // }
+
     req.user = user;
     next();
   } catch (error) {

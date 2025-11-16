@@ -25,7 +25,7 @@ const register = async (req, res, next) => {
     // Generate verification token
     const verifyToken = uuidv4();
 
-    // Create user
+    // Create user (auto-verify, no email verification required)
     const user = await prisma.user.create({
       data: {
         email,
@@ -33,7 +33,8 @@ const register = async (req, res, next) => {
         password: hashedPassword,
         firstName,
         lastName,
-        verifyToken,
+        isVerified: true, // Auto-verify users
+        verifyToken: null, // No verification needed
       },
       select: {
         id: true,
@@ -42,16 +43,10 @@ const register = async (req, res, next) => {
         firstName: true,
         lastName: true,
         role: true,
+        isVerified: true,
+        avatar: true,
       },
     });
-
-    // Send verification email (don't fail registration if email fails)
-    try {
-      await sendVerificationEmail(user.email, verifyToken);
-    } catch (emailError) {
-      console.error('Email sending failed:', emailError);
-      // Continue with registration even if email fails
-    }
 
     // Generate tokens
     const accessToken = generateAccessToken({ userId: user.id, role: user.role });
@@ -73,7 +68,7 @@ const register = async (req, res, next) => {
     });
 
     res.status(201).json({
-      message: 'Registration successful. Please verify your email.',
+      message: 'Registration successful.',
       user,
     });
   } catch (error) {
