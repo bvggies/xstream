@@ -24,6 +24,7 @@ const Home = () => {
       setMatches(response.data.matches || []);
     } catch (error) {
       console.error('Failed to fetch matches:', error);
+      setMatches([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -36,21 +37,26 @@ const Home = () => {
       setHighlights(topHighlights);
     } catch (error) {
       console.error('Failed to fetch highlights:', error);
+      setHighlights([]); // Set empty array on error
     } finally {
       setHighlightsLoading(false);
     }
   };
 
-  const liveMatches = matches.filter((m) => m.status === 'LIVE');
-  const upcomingMatches = matches.filter((m) => m.status === 'UPCOMING').slice(0, 6);
+  const liveMatches = Array.isArray(matches) ? matches.filter((m) => m.status === 'LIVE') : [];
+  const upcomingMatches = Array.isArray(matches) 
+    ? matches.filter((m) => m.status === 'UPCOMING').slice(0, 6)
+    : [];
   
   // Sort upcoming matches by date
-  upcomingMatches.sort((a, b) => new Date(a.matchDate) - new Date(b.matchDate));
+  if (upcomingMatches.length > 0) {
+    upcomingMatches.sort((a, b) => new Date(a.matchDate) - new Date(b.matchDate));
+  }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-dark-900">
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
+      <section className="relative h-screen flex items-center justify-center overflow-hidden bg-dark-900">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
