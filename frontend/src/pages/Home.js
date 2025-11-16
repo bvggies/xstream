@@ -7,7 +7,9 @@ import { FiPlay, FiClock, FiUsers, FiVideo } from 'react-icons/fi';
 
 const Home = () => {
   const [matches, setMatches] = useState([]);
+  const [highlights, setHighlights] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [highlightsLoading, setHighlightsLoading] = useState(true);
 
   useEffect(() => {
     fetchMatches();
