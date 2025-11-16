@@ -45,13 +45,13 @@ export const AuthProvider = ({ children }) => {
             setUser(null);
           }
         } catch (refreshError) {
-          // Refresh failed, user is not authenticated
-          console.log('Auth check failed:', refreshError);
+          // Refresh failed, user is not authenticated - this is normal for unauthenticated users
+          console.log('User not authenticated (this is normal for public pages)');
           setUser(null);
         }
       } else {
-        // Other errors - user is not authenticated
-        console.log('Auth check failed:', error);
+        // Other errors - user is not authenticated - this is normal for unauthenticated users
+        console.log('Auth check failed (normal for public pages):', error.message);
         setUser(null);
       }
     } finally {
