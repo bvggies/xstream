@@ -11,24 +11,15 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [highlightsLoading, setHighlightsLoading] = useState(true);
 
-  useEffect(() => {
-    // Fetch data but don't block rendering if it fails
-    Promise.allSettled([
-      fetchMatches().catch(err => console.error('Matches fetch error:', err)),
-      fetchFeaturedHighlights().catch(err => console.error('Highlights fetch error:', err))
-    ]);
-    
-    const interval = setInterval(() => {
-      fetchMatches().catch(err => console.error('Matches fetch error:', err));
-    }, 5 * 60 * 1000); // Refresh every 5 minutes
-    
-    return () => clearInterval(interval);
-  }, []);
-
+  // Define functions before using them in useEffect
   const fetchMatches = async () => {
     try {
       const response = await axiosInstance.get('/matches?status=LIVE,UPCOMING');
-      setMatches(response.data.matches || []);
+      if (response && response.data && Array.isArray(response.data.matches)) {
+        setMatches(response.data.matches);
+      } else {
+        setMatches([]);
+      }
     } catch (error) {
       console.error('Failed to fetch matches:', error);
       setMatches([]); // Set empty array on error
@@ -40,8 +31,12 @@ const Home = () => {
   const fetchFeaturedHighlights = async () => {
     try {
       const response = await axiosInstance.get('/highlights?sort=mostViewed');
-      const topHighlights = (response.data.highlights || []).slice(0, 3);
-      setHighlights(topHighlights);
+      if (response && response.data && Array.isArray(response.data.highlights)) {
+        const topHighlights = response.data.highlights.slice(0, 3);
+        setHighlights(topHighlights);
+      } else {
+        setHighlights([]);
+      }
     } catch (error) {
       console.error('Failed to fetch highlights:', error);
       setHighlights([]); // Set empty array on error
@@ -49,6 +44,30 @@ const Home = () => {
       setHighlightsLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Fetch data but don't block rendering if it fails
+    fetchMatches().catch(err => {
+      console.error('Matches fetch error:', err);
+      setMatches([]);
+      setLoading(false);
+    });
+    
+    fetchFeaturedHighlights().catch(err => {
+      console.error('Highlights fetch error:', err);
+      setHighlights([]);
+      setHighlightsLoading(false);
+    });
+    
+    const interval = setInterval(() => {
+      fetchMatches().catch(err => {
+        console.error('Matches fetch error:', err);
+        setMatches([]);
+      });
+    }, 5 * 60 * 1000); // Refresh every 5 minutes
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const liveMatches = Array.isArray(matches) ? matches.filter((m) => m.status === 'LIVE') : [];
   const upcomingMatches = Array.isArray(matches) 
