@@ -39,12 +39,19 @@ const HighlightCard = ({ highlight, index }) => {
           </div>
           <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-white text-xs">
             <div className="flex items-center space-x-2">
-              <span className="flex items-center space-x-1">
+              <span className="flex items-center space-x-1 bg-dark-900/70 px-2 py-1 rounded">
                 <FiClock className="w-3 h-3" />
                 <span>{formatDuration(highlight.duration)}</span>
               </span>
+              {/* Score Badge */}
+              {(highlight.homeScore !== null && highlight.homeScore !== undefined) || 
+               (highlight.awayScore !== null && highlight.awayScore !== undefined) ? (
+                <span className="bg-primary-500/90 px-2 py-1 rounded font-bold">
+                  {highlight.homeScore ?? 0} - {highlight.awayScore ?? 0}
+                </span>
+              ) : null}
             </div>
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-1 bg-dark-900/70 px-2 py-1 rounded">
               <FiEye className="w-3 h-3" />
               <span>{highlight.views.toLocaleString()}</span>
             </div>
