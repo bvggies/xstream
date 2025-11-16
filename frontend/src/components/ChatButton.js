@@ -146,23 +146,26 @@ const ChatButton = () => {
             messages: [message],
           });
         }
+        
+        // Update filtered conversations if search is active
+        if (searchQuery.trim()) {
+          const query = searchQuery.toLowerCase();
+          const filtered = updated.filter((conv) => {
+            const matchesUser = 
+              conv.username?.toLowerCase().includes(query) ||
+              conv.email?.toLowerCase().includes(query);
+            const matchesMessage = conv.messages.some((msg) =>
+              msg.message?.toLowerCase().includes(query)
+            );
+            return matchesUser || matchesMessage;
+          });
+          setFilteredConversations(filtered);
+        } else {
+          setFilteredConversations(updated);
+        }
+        
         return updated;
       });
-      
-      // Update filtered conversations if search is active
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const filtered = userConversations.filter((conv) => {
-          const matchesUser = 
-            conv.username?.toLowerCase().includes(query) ||
-            conv.email?.toLowerCase().includes(query);
-          const matchesMessage = conv.messages.some((msg) =>
-            msg.message?.toLowerCase().includes(query)
-          );
-          return matchesUser || matchesMessage;
-        });
-        setFilteredConversations(filtered);
-      }
 
       // If this message is for the currently selected user, add it to messages
       if (selectedUserId === message.userId) {
