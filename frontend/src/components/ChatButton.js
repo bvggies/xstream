@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import { FiMessageCircle, FiX, FiSend } from 'react-icons/fi';
+import { FiMessageCircle, FiX, FiSend, FiSearch } from 'react-icons/fi';
 import axiosInstance from '../utils/axios';
 import { getSocket } from '../utils/socket';
 import toast from 'react-hot-toast';
@@ -11,7 +11,9 @@ const ChatButton = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [userConversations, setUserConversations] = useState([]); // For admin: grouped by user
+  const [filteredConversations, setFilteredConversations] = useState([]); // Filtered conversations for admin
   const [selectedUserId, setSelectedUserId] = useState(null); // For admin: selected user to chat with
+  const [searchQuery, setSearchQuery] = useState(''); // Search query for admin
   const [inputMessage, setInputMessage] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -49,18 +51,47 @@ const ChatButton = () => {
     }
   }, [isOpen, selectedUserId]);
 
+  // Filter conversations based on search query
+  useEffect(() => {
+    if (user.role === 'ADMIN' && userConversations.length > 0) {
+      if (!searchQuery.trim()) {
+        setFilteredConversations(userConversations);
+      } else {
+        const query = searchQuery.toLowerCase();
+        const filtered = userConversations.filter((conv) => {
+          // Search by username or email
+          const matchesUser = 
+            conv.username?.toLowerCase().includes(query) ||
+            conv.email?.toLowerCase().includes(query);
+          
+          // Search within messages
+          const matchesMessage = conv.messages.some((msg) =>
+            msg.message?.toLowerCase().includes(query)
+          );
+          
+          return matchesUser || matchesMessage;
+        });
+        setFilteredConversations(filtered);
+      }
+    } else {
+      setFilteredConversations(userConversations);
+    }
+  }, [searchQuery, userConversations, user.role]);
+
   const fetchChatHistory = async () => {
     try {
       const response = await axiosInstance.get('/chat/history');
       if (user.role === 'ADMIN' && response.data.isAdmin) {
         // Admin view - messages are grouped by user
-        setUserConversations(response.data.messages || []);
+        const conversations = response.data.messages || [];
+        setUserConversations(conversations);
+        setFilteredConversations(conversations);
         // Set selected user to first user with messages, or most recent
-        if (response.data.messages && response.data.messages.length > 0) {
+        if (conversations.length > 0) {
           if (!selectedUserId) {
             // Find user with most recent message
-            let mostRecent = response.data.messages[0];
-            response.data.messages.forEach((conv) => {
+            let mostRecent = conversations[0];
+            conversations.forEach((conv) => {
               const lastMsg = conv.messages[conv.messages.length - 1];
               const mostRecentLastMsg = mostRecent.messages[mostRecent.messages.length - 1];
               if (new Date(lastMsg.createdAt) > new Date(mostRecentLastMsg.createdAt)) {
@@ -71,7 +102,7 @@ const ChatButton = () => {
             setMessages(mostRecent.messages || []);
           } else {
             // Update messages for selected user
-            const selectedConv = response.data.messages.find((c) => c.userId === selectedUserId);
+            const selectedConv = conversations.find((c) => c.userId === selectedUserId);
             setMessages(selectedConv?.messages || []);
           }
         }
@@ -111,12 +142,27 @@ const ChatButton = () => {
           updated.push({
             userId: message.userId,
             username: message.username,
-            email: '',
+            email: message.email || '',
             messages: [message],
           });
         }
         return updated;
       });
+      
+      // Update filtered conversations if search is active
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const filtered = userConversations.filter((conv) => {
+          const matchesUser = 
+            conv.username?.toLowerCase().includes(query) ||
+            conv.email?.toLowerCase().includes(query);
+          const matchesMessage = conv.messages.some((msg) =>
+            msg.message?.toLowerCase().includes(query)
+          );
+          return matchesUser || matchesMessage;
+        });
+        setFilteredConversations(filtered);
+      }
 
       // If this message is for the currently selected user, add it to messages
       if (selectedUserId === message.userId) {
@@ -249,42 +295,88 @@ const ChatButton = () => {
             className="fixed bottom-24 right-6 z-50 w-[500px] h-[600px] bg-dark-800 rounded-2xl shadow-2xl border border-dark-700 flex overflow-hidden"
           >
             {/* Admin: User List Sidebar */}
-            {user.role === 'ADMIN' && userConversations.length > 0 && (
-              <div className="w-1/3 border-r border-dark-700 bg-dark-900 overflow-y-auto custom-scrollbar">
+            {user.role === 'ADMIN' && (
+              <div className="w-1/3 border-r border-dark-700 bg-dark-900 flex flex-col">
+                {/* Search Bar */}
                 <div className="p-3 border-b border-dark-700">
-                  <h4 className="text-white font-semibold text-sm">Users</h4>
+                  <div className="relative">
+                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-400" size={16} />
+                    <input
+                      type="text"
+                      placeholder="Search users or messages..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white text-sm placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
                 </div>
-                <div className="divide-y divide-dark-700">
-                  {userConversations.map((conv) => {
-                    const lastMessage = conv.messages[conv.messages.length - 1];
-                    const unreadCount = conv.messages.filter((m) => !m.isAdmin && !m.isSeen).length;
-                    return (
-                      <button
-                        key={conv.userId}
-                        onClick={() => {
-                          setSelectedUserId(conv.userId);
-                          setMessages(conv.messages || []);
-                          markMessagesAsSeen();
-                        }}
-                        className={`w-full text-left p-3 hover:bg-dark-800 transition-colors ${
-                          selectedUserId === conv.userId ? 'bg-dark-800 border-l-2 border-primary-500' : ''
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-white font-medium text-sm truncate">{conv.username}</p>
-                          {unreadCount > 0 && (
-                            <span className="bg-primary-500 text-white text-xs rounded-full px-2 py-0.5">
-                              {unreadCount}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-dark-400 text-xs truncate">
-                          {lastMessage?.message || 'No messages'}
-                        </p>
-                      </button>
-                    );
-                  })}
+
+                {/* User List */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                  {filteredConversations.length === 0 ? (
+                    <div className="p-4 text-center">
+                      <p className="text-dark-400 text-sm">
+                        {searchQuery ? 'No users or messages found' : 'No conversations yet'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-dark-700">
+                      {filteredConversations.map((conv) => {
+                        const lastMessage = conv.messages[conv.messages.length - 1];
+                        const unreadCount = conv.messages.filter((m) => !m.isAdmin && !m.isSeen).length;
+                        const isSelected = selectedUserId === conv.userId;
+                        
+                        return (
+                          <button
+                            key={conv.userId}
+                            onClick={() => {
+                              setSelectedUserId(conv.userId);
+                              setMessages(conv.messages || []);
+                              markMessagesAsSeen();
+                            }}
+                            className={`w-full text-left p-3 hover:bg-dark-800 transition-colors relative ${
+                              isSelected ? 'bg-dark-800 border-l-2 border-primary-500' : ''
+                            }`}
+                          >
+                            <div className="flex items-start justify-between mb-1">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white font-medium text-sm truncate">{conv.username}</p>
+                                {conv.email && (
+                                  <p className="text-dark-500 text-xs truncate">{conv.email}</p>
+                                )}
+                              </div>
+                              {unreadCount > 0 && (
+                                <span className="ml-2 bg-primary-500 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[20px] text-center flex-shrink-0">
+                                  {unreadCount > 99 ? '99+' : unreadCount}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-dark-400 text-xs truncate mt-1">
+                              {lastMessage?.message || 'No messages'}
+                            </p>
+                            {unreadCount > 0 && !isSelected && (
+                              <div className="absolute top-2 right-2 w-2 h-2 bg-primary-500 rounded-full"></div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
+
+                {/* Total Unread Count */}
+                {userConversations.length > 0 && (
+                  <div className="p-3 border-t border-dark-700 bg-dark-800">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-dark-400">Total Unread:</span>
+                      <span className="text-primary-400 font-bold">
+                        {userConversations.reduce((total, conv) => {
+                          return total + conv.messages.filter((m) => !m.isAdmin && !m.isSeen).length;
+                        }, 0)}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
