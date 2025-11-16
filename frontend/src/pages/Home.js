@@ -65,12 +65,7 @@ const Home = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-dark-900/90 via-dark-900/70 to-dark-900" />
         
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="relative z-10 text-center px-4"
-        >
+        <div className="relative z-10 text-center px-4">
           <motion.img
             src="/logo.png"
             alt="Xstream"
@@ -78,22 +73,40 @@ const Home = () => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: 'spring' }}
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
           />
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-4" data-aos="fade-up">
+          <motion.h1 
+            className="text-5xl md:text-7xl font-bold text-white mb-4"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
             Xstream
-          </h1>
-          <p className="text-xl md:text-2xl text-dark-300 mb-8" data-aos="fade-up" data-aos-delay="100">
+          </motion.h1>
+          <motion.p 
+            className="text-xl md:text-2xl text-dark-300 mb-8"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.1 }}
+          >
             Live Football Streaming Platform
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center" data-aos="fade-up" data-aos-delay="200">
+          </motion.p>
+          <motion.div 
+            className="flex flex-col sm:flex-row gap-4 justify-center"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
             <Link to="/matches" className="btn-primary text-lg px-8 py-4">
               Watch Live Matches
             </Link>
             <Link to="/register" className="btn-secondary text-lg px-8 py-4">
               Get Started
             </Link>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
 
         {/* Scroll Indicator */}
         <motion.div
