@@ -135,8 +135,90 @@ const Home = () => {
         </section>
       )}
 
-      {/* Upcoming Matches Section */}
+      {/* Featured Highlights Section */}
       <section className="py-16 bg-dark-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-8 flex items-center justify-between"
+          >
+            <div>
+              <h2 className="text-3xl font-bold text-white mb-2">Featured Highlights</h2>
+              <p className="text-dark-400">Watch the best moments from recent matches</p>
+            </div>
+            <Link
+              to="/highlights"
+              className="btn-secondary flex items-center space-x-2"
+            >
+              <span>View All</span>
+              <span>→</span>
+            </Link>
+          </motion.div>
+          
+          {highlightsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="card skeleton h-64" />
+              ))}
+            </div>
+          ) : highlights.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {highlights.map((highlight, index) => (
+                <motion.div
+                  key={highlight.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  className="card group cursor-pointer overflow-hidden hover:border-primary-500 transition-all"
+                >
+                  <Link to={`/highlights/${highlight.id}`}>
+                    <div className="relative h-40 overflow-hidden bg-dark-800">
+                      <img
+                        src={highlight.thumbnailUrl}
+                        alt={highlight.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        onError={(e) => {
+                          e.target.src = 'https://via.placeholder.com/400x225?text=No+Thumbnail';
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-dark-900/90 via-transparent to-transparent" />
+                      <div className="absolute top-2 right-2 bg-primary-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center space-x-1">
+                        <FiVideo className="w-3 h-3" />
+                        <span>Highlight</span>
+                      </div>
+                      {(highlight.homeScore !== null || highlight.awayScore !== null) && (
+                        <div className="absolute bottom-2 left-2 bg-primary-500/90 px-2 py-1 rounded text-xs font-bold">
+                          {highlight.homeScore ?? 0} - {highlight.awayScore ?? 0}
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <span className="text-primary-400 text-xs font-semibold">{highlight.league}</span>
+                      <h3 className="text-lg font-bold text-white mt-2 line-clamp-2 group-hover:text-primary-400 transition-colors">
+                        {highlight.title}
+                      </h3>
+                      <div className="flex items-center justify-between mt-2 text-xs text-dark-400">
+                        <span>{highlight.views.toLocaleString()} views</span>
+                        <span>{format(new Date(highlight.createdAt), 'MMM dd')}</span>
+                      </div>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-dark-400">No highlights available yet</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Upcoming Matches Section */}
+      <section className="py-16 bg-dark-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
