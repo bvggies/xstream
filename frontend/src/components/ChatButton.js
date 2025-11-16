@@ -29,6 +29,14 @@ const ChatButton = () => {
         socket.off('new_message', handleNewMessage);
         socket.off('message_seen', handleMessageSeen);
       };
+    } else {
+      // If socket not available, poll for new messages (especially for admins)
+      const pollInterval = setInterval(() => {
+        fetchChatHistory();
+        fetchUnreadCount();
+      }, 5000); // Poll every 5 seconds
+
+      return () => clearInterval(pollInterval);
     }
   }, [user, socket]);
 
@@ -210,8 +218,12 @@ const ChatButton = () => {
                 <div className="flex items-center justify-center h-full text-center">
                   <div>
                     <FiMessageCircle className="w-12 h-12 mx-auto mb-3 text-dark-600" />
-                    <p className="text-dark-400">No messages yet</p>
-                    <p className="text-dark-500 text-sm mt-1">Start a conversation</p>
+                    <p className="text-dark-400">
+                      {user.role === 'ADMIN' ? 'No user messages yet' : 'No messages yet'}
+                    </p>
+                    <p className="text-dark-500 text-sm mt-1">
+                      {user.role === 'ADMIN' ? 'Waiting for user messages...' : 'Start a conversation'}
+                    </p>
                   </div>
                 </div>
               ) : (
@@ -220,7 +232,7 @@ const ChatButton = () => {
                     key={message.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`flex ${message.isAdmin ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${message.isAdmin ? 'justify-end' : 'justify-start'} mb-2`}
                   >
                     <div
                       className={`max-w-[80%] rounded-2xl p-3 ${
@@ -229,6 +241,11 @@ const ChatButton = () => {
                           : 'bg-dark-700 text-white rounded-bl-none'
                       }`}
                     >
+                      {user.role === 'ADMIN' && !message.isAdmin && message.username && (
+                        <p className="text-xs font-semibold mb-1 opacity-80">
+                          {message.username}
+                        </p>
+                      )}
                       <p className="text-sm">{message.message}</p>
                       <p className={`text-xs mt-1 ${message.isAdmin ? 'text-white/70' : 'text-dark-400'}`}>
                         {new Date(message.createdAt).toLocaleTimeString([], {
