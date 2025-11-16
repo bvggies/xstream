@@ -19,6 +19,10 @@ const MatchModal = ({ match, onClose }) => {
   const [streamingLinks, setStreamingLinks] = useState([]);
   const [newLink, setNewLink] = useState({ url: '', type: 'HLS', quality: 'HD' });
   const [loading, setLoading] = useState(false);
+  const [showTeamSelector, setShowTeamSelector] = useState({ home: false, away: false });
+  const [showLeagueSelector, setShowLeagueSelector] = useState(false);
+  const [teamSearch, setTeamSearch] = useState({ home: '', away: '' });
+  const [leagueSearch, setLeagueSearch] = useState('');
 
   useEffect(() => {
     if (match) {
@@ -26,16 +30,52 @@ const MatchModal = ({ match, onClose }) => {
         title: match.title || '',
         homeTeam: match.homeTeam || '',
         awayTeam: match.awayTeam || '',
-        homeTeamLogo: match.homeTeamLogo || '',
-        awayTeamLogo: match.awayTeamLogo || '',
+        homeTeamLogo: match.homeTeamLogo || getTeamLogo(match.homeTeam) || '',
+        awayTeamLogo: match.awayTeamLogo || getTeamLogo(match.awayTeam) || '',
         league: match.league || '',
-        leagueLogo: match.leagueLogo || '',
+        leagueLogo: match.leagueLogo || getLeagueLogo(match.league) || '',
         matchDate: match.matchDate ? new Date(match.matchDate).toISOString().slice(0, 16) : '',
         status: match.status || 'UPCOMING',
       });
       setStreamingLinks(match.streamingLinks || []);
     }
   }, [match]);
+
+  const selectTeam = (team, type) => {
+    const logo = getTeamLogo(team.name);
+    if (type === 'home') {
+      setFormData({ ...formData, homeTeam: team.name, homeTeamLogo: logo || formData.homeTeamLogo });
+      setShowTeamSelector({ ...showTeamSelector, home: false });
+      setTeamSearch({ ...teamSearch, home: '' });
+    } else {
+      setFormData({ ...formData, awayTeam: team.name, awayTeamLogo: logo || formData.awayTeamLogo });
+      setShowTeamSelector({ ...showTeamSelector, away: false });
+      setTeamSearch({ ...teamSearch, away: '' });
+    }
+  };
+
+  const selectLeague = (league) => {
+    const logo = getLeagueLogo(league.name);
+    setFormData({ ...formData, league: league.name, leagueLogo: logo || formData.leagueLogo });
+    setShowLeagueSelector(false);
+    setLeagueSearch('');
+  };
+
+  const filteredTeams = (type) => {
+    const search = type === 'home' ? teamSearch.home : teamSearch.away;
+    if (!search) return popularTeams;
+    return popularTeams.filter(team =>
+      team.name.toLowerCase().includes(search.toLowerCase())
+    );
+  };
+
+  const filteredLeagues = () => {
+    if (!leagueSearch) return popularLeagues;
+    return popularLeagues.filter(league =>
+      league.name.toLowerCase().includes(leagueSearch.toLowerCase()) ||
+      league.country.toLowerCase().includes(leagueSearch.toLowerCase())
+    );
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -148,74 +188,232 @@ const MatchModal = ({ match, onClose }) => {
                   required
                 />
               </div>
-              <div>
+              {/* League */}
+              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-white mb-2">League</label>
-                <input
-                  type="text"
-                  value={formData.league}
-                  onChange={(e) => setFormData({ ...formData, league: e.target.value })}
-                  className="input-field"
-                  required
-                />
+                <div className="relative">
+                  <div className="flex space-x-2">
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        value={formData.league}
+                        onChange={(e) => {
+                          setFormData({ ...formData, league: e.target.value });
+                          setShowLeagueSelector(false);
+                        }}
+                        onFocus={() => setShowLeagueSelector(true)}
+                        placeholder="Select or type league name"
+                        className="input-field pr-10"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowLeagueSelector(!showLeagueSelector)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-dark-400 hover:text-white"
+                      >
+                        <FiSearch />
+                      </button>
+                    </div>
+                    {formData.leagueLogo && (
+                      <img src={formData.leagueLogo} alt="League logo" className="h-10 w-10 object-contain rounded" onError={(e) => e.target.style.display = 'none'} />
+                    )}
+                  </div>
+                  {showLeagueSelector && (
+                    <div className="absolute z-10 mt-1 w-full bg-dark-800 border border-dark-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                      <div className="p-2 sticky top-0 bg-dark-800 border-b border-dark-700">
+                        <input
+                          type="text"
+                          value={leagueSearch}
+                          onChange={(e) => setLeagueSearch(e.target.value)}
+                          placeholder="Search leagues..."
+                          className="input-field w-full bg-dark-900"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="p-2">
+                        {filteredLeagues().map((league) => (
+                          <button
+                            key={league.name}
+                            type="button"
+                            onClick={() => selectLeague(league)}
+                            className="w-full flex items-center space-x-3 p-2 hover:bg-dark-700 rounded-lg transition-colors text-left"
+                          >
+                            {league.logo && (
+                              <img src={league.logo} alt={league.name} className="h-8 w-8 object-contain" onError={(e) => e.target.style.display = 'none'} />
+                            )}
+                            <div className="flex-1">
+                              <p className="text-white text-sm font-medium">{league.name}</p>
+                              <p className="text-dark-400 text-xs">{league.country}</p>
+                            </div>
+                          </button>
+                        ))}
+                        {filteredLeagues().length === 0 && (
+                          <p className="text-dark-400 text-sm p-2 text-center">No leagues found</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2">
+                  <label className="block text-sm font-medium text-white mb-2">League Logo URL (optional)</label>
+                  <input
+                    type="url"
+                    value={formData.leagueLogo}
+                    onChange={(e) => setFormData({ ...formData, leagueLogo: e.target.value })}
+                    placeholder="https://example.com/logo.png"
+                    className="input-field"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">League Logo URL</label>
-                <input
-                  type="url"
-                  value={formData.leagueLogo}
-                  onChange={(e) => setFormData({ ...formData, leagueLogo: e.target.value })}
-                  placeholder="https://example.com/logo.png"
-                  className="input-field"
-                />
-                {formData.leagueLogo && (
-                  <img src={formData.leagueLogo} alt="League logo" className="mt-2 h-12 w-auto rounded" onError={(e) => e.target.style.display = 'none'} />
-                )}
-              </div>
+
+              {/* Home Team */}
               <div>
                 <label className="block text-sm font-medium text-white mb-2">Home Team</label>
-                <input
-                  type="text"
-                  value={formData.homeTeam}
-                  onChange={(e) => setFormData({ ...formData, homeTeam: e.target.value })}
-                  className="input-field"
-                  required
-                />
+                <div className="relative">
+                  <div className="flex space-x-2">
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        value={formData.homeTeam}
+                        onChange={(e) => {
+                          setFormData({ ...formData, homeTeam: e.target.value });
+                          setShowTeamSelector({ ...showTeamSelector, home: false });
+                        }}
+                        onFocus={() => setShowTeamSelector({ ...showTeamSelector, home: true })}
+                        placeholder="Select or type team name"
+                        className="input-field pr-10"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowTeamSelector({ ...showTeamSelector, home: !showTeamSelector.home })}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-dark-400 hover:text-white"
+                      >
+                        <FiSearch />
+                      </button>
+                    </div>
+                    {formData.homeTeamLogo && (
+                      <img src={formData.homeTeamLogo} alt="Home team logo" className="h-10 w-10 object-contain rounded" onError={(e) => e.target.style.display = 'none'} />
+                    )}
+                  </div>
+                  {showTeamSelector.home && (
+                    <div className="absolute z-10 mt-1 w-full bg-dark-800 border border-dark-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                      <div className="p-2 sticky top-0 bg-dark-800 border-b border-dark-700">
+                        <input
+                          type="text"
+                          value={teamSearch.home}
+                          onChange={(e) => setTeamSearch({ ...teamSearch, home: e.target.value })}
+                          placeholder="Search teams..."
+                          className="input-field w-full bg-dark-900"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="p-2">
+                        {filteredTeams('home').map((team) => (
+                          <button
+                            key={team.name}
+                            type="button"
+                            onClick={() => selectTeam(team, 'home')}
+                            className="w-full flex items-center space-x-3 p-2 hover:bg-dark-700 rounded-lg transition-colors text-left"
+                          >
+                            {team.logo && (
+                              <img src={team.logo} alt={team.name} className="h-8 w-8 object-contain" onError={(e) => e.target.style.display = 'none'} />
+                            )}
+                            <p className="text-white text-sm font-medium">{team.name}</p>
+                          </button>
+                        ))}
+                        {filteredTeams('home').length === 0 && (
+                          <p className="text-dark-400 text-sm p-2 text-center">No teams found</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2">
+                  <label className="block text-sm font-medium text-white mb-2">Home Team Logo URL (optional)</label>
+                  <input
+                    type="url"
+                    value={formData.homeTeamLogo}
+                    onChange={(e) => setFormData({ ...formData, homeTeamLogo: e.target.value })}
+                    placeholder="https://example.com/logo.png"
+                    className="input-field"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">Home Team Logo URL</label>
-                <input
-                  type="url"
-                  value={formData.homeTeamLogo}
-                  onChange={(e) => setFormData({ ...formData, homeTeamLogo: e.target.value })}
-                  placeholder="https://example.com/logo.png"
-                  className="input-field"
-                />
-                {formData.homeTeamLogo && (
-                  <img src={formData.homeTeamLogo} alt="Home team logo" className="mt-2 h-12 w-auto rounded" onError={(e) => e.target.style.display = 'none'} />
-                )}
-              </div>
+
+              {/* Away Team */}
               <div>
                 <label className="block text-sm font-medium text-white mb-2">Away Team</label>
-                <input
-                  type="text"
-                  value={formData.awayTeam}
-                  onChange={(e) => setFormData({ ...formData, awayTeam: e.target.value })}
-                  className="input-field"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">Away Team Logo URL</label>
-                <input
-                  type="url"
-                  value={formData.awayTeamLogo}
-                  onChange={(e) => setFormData({ ...formData, awayTeamLogo: e.target.value })}
-                  placeholder="https://example.com/logo.png"
-                  className="input-field"
-                />
-                {formData.awayTeamLogo && (
-                  <img src={formData.awayTeamLogo} alt="Away team logo" className="mt-2 h-12 w-auto rounded" onError={(e) => e.target.style.display = 'none'} />
-                )}
+                <div className="relative">
+                  <div className="flex space-x-2">
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        value={formData.awayTeam}
+                        onChange={(e) => {
+                          setFormData({ ...formData, awayTeam: e.target.value });
+                          setShowTeamSelector({ ...showTeamSelector, away: false });
+                        }}
+                        onFocus={() => setShowTeamSelector({ ...showTeamSelector, away: true })}
+                        placeholder="Select or type team name"
+                        className="input-field pr-10"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowTeamSelector({ ...showTeamSelector, away: !showTeamSelector.away })}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-dark-400 hover:text-white"
+                      >
+                        <FiSearch />
+                      </button>
+                    </div>
+                    {formData.awayTeamLogo && (
+                      <img src={formData.awayTeamLogo} alt="Away team logo" className="h-10 w-10 object-contain rounded" onError={(e) => e.target.style.display = 'none'} />
+                    )}
+                  </div>
+                  {showTeamSelector.away && (
+                    <div className="absolute z-10 mt-1 w-full bg-dark-800 border border-dark-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                      <div className="p-2 sticky top-0 bg-dark-800 border-b border-dark-700">
+                        <input
+                          type="text"
+                          value={teamSearch.away}
+                          onChange={(e) => setTeamSearch({ ...teamSearch, away: e.target.value })}
+                          placeholder="Search teams..."
+                          className="input-field w-full bg-dark-900"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="p-2">
+                        {filteredTeams('away').map((team) => (
+                          <button
+                            key={team.name}
+                            type="button"
+                            onClick={() => selectTeam(team, 'away')}
+                            className="w-full flex items-center space-x-3 p-2 hover:bg-dark-700 rounded-lg transition-colors text-left"
+                          >
+                            {team.logo && (
+                              <img src={team.logo} alt={team.name} className="h-8 w-8 object-contain" onError={(e) => e.target.style.display = 'none'} />
+                            )}
+                            <p className="text-white text-sm font-medium">{team.name}</p>
+                          </button>
+                        ))}
+                        {filteredTeams('away').length === 0 && (
+                          <p className="text-dark-400 text-sm p-2 text-center">No teams found</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2">
+                  <label className="block text-sm font-medium text-white mb-2">Away Team Logo URL (optional)</label>
+                  <input
+                    type="url"
+                    value={formData.awayTeamLogo}
+                    onChange={(e) => setFormData({ ...formData, awayTeamLogo: e.target.value })}
+                    placeholder="https://example.com/logo.png"
+                    className="input-field"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-white mb-2">Match Date</label>
