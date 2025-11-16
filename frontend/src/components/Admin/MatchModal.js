@@ -217,7 +217,31 @@ const MatchModal = ({ match, onClose }) => {
                       </button>
                     </div>
                     {formData.leagueLogo && (
-                      <img src={formData.leagueLogo} alt="League logo" className="h-10 w-10 object-contain rounded" onError={(e) => e.target.style.display = 'none'} />
+                      <div className="relative group">
+                        <img 
+                          src={formData.leagueLogo} 
+                          alt="League logo" 
+                          className="h-10 w-10 object-contain rounded border border-dark-600 cursor-pointer hover:border-primary-500 transition-colors" 
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'block';
+                          }}
+                        />
+                        <div className="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1 rounded">✕</div>
+                        {/* Preview on hover */}
+                        <div className="hidden group-hover:block absolute top-12 left-0 z-20 bg-dark-800 border border-dark-700 rounded-lg p-3 shadow-2xl">
+                          <p className="text-white text-xs mb-2 font-semibold">Logo Preview</p>
+                          <img 
+                            src={formData.leagueLogo} 
+                            alt="Preview" 
+                            className="h-24 w-24 object-contain bg-white rounded p-2"
+                            onError={(e) => e.target.style.display = 'none'}
+                          />
+                          <p className="text-dark-400 text-xs mt-2 max-w-[200px] truncate" title={formData.leagueLogo}>
+                            {formData.leagueLogo}
+                          </p>
+                        </div>
+                      </div>
                     )}
                   </div>
                   {showLeagueSelector && (
@@ -258,13 +282,42 @@ const MatchModal = ({ match, onClose }) => {
                 </div>
                 <div className="mt-2">
                   <label className="block text-sm font-medium text-white mb-2">League Logo URL (optional)</label>
-                  <input
-                    type="url"
-                    value={formData.leagueLogo}
-                    onChange={(e) => setFormData({ ...formData, leagueLogo: e.target.value })}
-                    placeholder="https://example.com/logo.png"
-                    className="input-field"
-                  />
+                  <div className="space-y-2">
+                    <input
+                      type="url"
+                      value={formData.leagueLogo}
+                      onChange={(e) => setFormData({ ...formData, leagueLogo: e.target.value })}
+                      placeholder="https://example.com/logo.png"
+                      className="input-field"
+                    />
+                    {formData.leagueLogo && (
+                      <div className="bg-dark-800 rounded-lg p-4 border border-dark-700">
+                        <p className="text-white text-sm font-semibold mb-2">Logo Preview</p>
+                        <div className="flex items-center space-x-4">
+                          <div className="bg-white rounded-lg p-3 flex items-center justify-center">
+                            <img 
+                              src={formData.leagueLogo} 
+                              alt="League logo preview" 
+                              className="h-20 w-20 object-contain"
+                              onError={(e) => {
+                                e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23ccc" font-size="12"%3EInvalid%3C/text%3E%3C/svg%3E';
+                              }}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-dark-400 text-xs break-all">{formData.leagueLogo}</p>
+                            <button
+                              type="button"
+                              onClick={() => setFormData({ ...formData, leagueLogo: '' })}
+                              className="mt-2 text-red-400 hover:text-red-300 text-xs"
+                            >
+                              Remove logo
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -295,7 +348,31 @@ const MatchModal = ({ match, onClose }) => {
                       </button>
                     </div>
                     {formData.homeTeamLogo && (
-                      <img src={formData.homeTeamLogo} alt="Home team logo" className="h-10 w-10 object-contain rounded" onError={(e) => e.target.style.display = 'none'} />
+                      <div className="relative group">
+                        <img 
+                          src={formData.homeTeamLogo} 
+                          alt="Home team logo" 
+                          className="h-10 w-10 object-contain rounded border border-dark-600 cursor-pointer hover:border-primary-500 transition-colors" 
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'block';
+                          }}
+                        />
+                        <div className="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1 rounded">✕</div>
+                        {/* Preview on hover */}
+                        <div className="hidden group-hover:block absolute top-12 left-0 z-20 bg-dark-800 border border-dark-700 rounded-lg p-3 shadow-2xl">
+                          <p className="text-white text-xs mb-2 font-semibold">Logo Preview</p>
+                          <img 
+                            src={formData.homeTeamLogo} 
+                            alt="Preview" 
+                            className="h-24 w-24 object-contain bg-white rounded p-2"
+                            onError={(e) => e.target.style.display = 'none'}
+                          />
+                          <p className="text-dark-400 text-xs mt-2 max-w-[200px] truncate" title={formData.homeTeamLogo}>
+                            {formData.homeTeamLogo}
+                          </p>
+                        </div>
+                      </div>
                     )}
                   </div>
                   {showTeamSelector.home && (
@@ -333,13 +410,42 @@ const MatchModal = ({ match, onClose }) => {
                 </div>
                 <div className="mt-2">
                   <label className="block text-sm font-medium text-white mb-2">Home Team Logo URL (optional)</label>
-                  <input
-                    type="url"
-                    value={formData.homeTeamLogo}
-                    onChange={(e) => setFormData({ ...formData, homeTeamLogo: e.target.value })}
-                    placeholder="https://example.com/logo.png"
-                    className="input-field"
-                  />
+                  <div className="space-y-2">
+                    <input
+                      type="url"
+                      value={formData.homeTeamLogo}
+                      onChange={(e) => setFormData({ ...formData, homeTeamLogo: e.target.value })}
+                      placeholder="https://example.com/logo.png"
+                      className="input-field"
+                    />
+                    {formData.homeTeamLogo && (
+                      <div className="bg-dark-800 rounded-lg p-4 border border-dark-700">
+                        <p className="text-white text-sm font-semibold mb-2">Logo Preview</p>
+                        <div className="flex items-center space-x-4">
+                          <div className="bg-white rounded-lg p-3 flex items-center justify-center">
+                            <img 
+                              src={formData.homeTeamLogo} 
+                              alt="Home team logo preview" 
+                              className="h-20 w-20 object-contain"
+                              onError={(e) => {
+                                e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23ccc" font-size="12"%3EInvalid%3C/text%3E%3C/svg%3E';
+                              }}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-dark-400 text-xs break-all">{formData.homeTeamLogo}</p>
+                            <button
+                              type="button"
+                              onClick={() => setFormData({ ...formData, homeTeamLogo: '' })}
+                              className="mt-2 text-red-400 hover:text-red-300 text-xs"
+                            >
+                              Remove logo
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -370,7 +476,31 @@ const MatchModal = ({ match, onClose }) => {
                       </button>
                     </div>
                     {formData.awayTeamLogo && (
-                      <img src={formData.awayTeamLogo} alt="Away team logo" className="h-10 w-10 object-contain rounded" onError={(e) => e.target.style.display = 'none'} />
+                      <div className="relative group">
+                        <img 
+                          src={formData.awayTeamLogo} 
+                          alt="Away team logo" 
+                          className="h-10 w-10 object-contain rounded border border-dark-600 cursor-pointer hover:border-primary-500 transition-colors" 
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'block';
+                          }}
+                        />
+                        <div className="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1 rounded">✕</div>
+                        {/* Preview on hover */}
+                        <div className="hidden group-hover:block absolute top-12 left-0 z-20 bg-dark-800 border border-dark-700 rounded-lg p-3 shadow-2xl">
+                          <p className="text-white text-xs mb-2 font-semibold">Logo Preview</p>
+                          <img 
+                            src={formData.awayTeamLogo} 
+                            alt="Preview" 
+                            className="h-24 w-24 object-contain bg-white rounded p-2"
+                            onError={(e) => e.target.style.display = 'none'}
+                          />
+                          <p className="text-dark-400 text-xs mt-2 max-w-[200px] truncate" title={formData.awayTeamLogo}>
+                            {formData.awayTeamLogo}
+                          </p>
+                        </div>
+                      </div>
                     )}
                   </div>
                   {showTeamSelector.away && (
@@ -408,13 +538,42 @@ const MatchModal = ({ match, onClose }) => {
                 </div>
                 <div className="mt-2">
                   <label className="block text-sm font-medium text-white mb-2">Away Team Logo URL (optional)</label>
-                  <input
-                    type="url"
-                    value={formData.awayTeamLogo}
-                    onChange={(e) => setFormData({ ...formData, awayTeamLogo: e.target.value })}
-                    placeholder="https://example.com/logo.png"
-                    className="input-field"
-                  />
+                  <div className="space-y-2">
+                    <input
+                      type="url"
+                      value={formData.awayTeamLogo}
+                      onChange={(e) => setFormData({ ...formData, awayTeamLogo: e.target.value })}
+                      placeholder="https://example.com/logo.png"
+                      className="input-field"
+                    />
+                    {formData.awayTeamLogo && (
+                      <div className="bg-dark-800 rounded-lg p-4 border border-dark-700">
+                        <p className="text-white text-sm font-semibold mb-2">Logo Preview</p>
+                        <div className="flex items-center space-x-4">
+                          <div className="bg-white rounded-lg p-3 flex items-center justify-center">
+                            <img 
+                              src={formData.awayTeamLogo} 
+                              alt="Away team logo preview" 
+                              className="h-20 w-20 object-contain"
+                              onError={(e) => {
+                                e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23ccc" font-size="12"%3EInvalid%3C/text%3E%3C/svg%3E';
+                              }}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-dark-400 text-xs break-all">{formData.awayTeamLogo}</p>
+                            <button
+                              type="button"
+                              onClick={() => setFormData({ ...formData, awayTeamLogo: '' })}
+                              className="mt-2 text-red-400 hover:text-red-300 text-xs"
+                            >
+                              Remove logo
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               <div>
