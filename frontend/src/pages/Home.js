@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import axiosInstance from '../utils/axios';
 import { format } from 'date-fns';
-import { Link } from 'react-router-dom';
-import { FiPlay, FiClock, FiUsers } from 'react-icons/fi';
+import { FiPlay, FiClock, FiUsers, FiVideo } from 'react-icons/fi';
 
 const Home = () => {
   const [matches, setMatches] = useState([]);
