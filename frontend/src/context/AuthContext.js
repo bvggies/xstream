@@ -42,7 +42,11 @@ export const AuthProvider = ({ children }) => {
       const response = await axiosInstance.post('/auth/login', { email, password });
       setUser(response.data.user);
       initSocket();
-      return { success: true };
+      return { 
+        success: true, 
+        user: response.data.user,
+        redirectTo: response.data.redirectTo || (response.data.user.role === 'ADMIN' ? '/admin' : '/dashboard')
+      };
     } catch (error) {
       return {
         success: false,
