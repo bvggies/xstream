@@ -3,7 +3,13 @@ const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config();
+
+// Load environment variables
+try {
+  require('dotenv').config();
+} catch (e) {
+  console.log('dotenv not available, using environment variables');
+}
 
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
@@ -29,11 +35,13 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// Rate limiting
+// Rate limiting - adjust for serverless
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 app.use('/api/', limiter);
@@ -47,7 +55,20 @@ app.use('/api/chat', chatRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Root path
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Xstream API',
+    status: 'running',
+    version: '1.0.0'
+  });
 });
 
 // Error handling
