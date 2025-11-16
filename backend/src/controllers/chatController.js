@@ -166,13 +166,26 @@ const sendMessage = async (req, res, next) => {
 
 const getUnreadCount = async (req, res, next) => {
   try {
-    const count = await prisma.chatMessage.count({
-      where: {
-        userId: req.user.id,
-        isSeen: false,
-        isAdmin: true, // Only count admin messages as unread for users
-      },
-    });
+    let count;
+    
+    if (req.user.role === 'ADMIN') {
+      // Admin: count unread user messages (messages from users that admin hasn't seen)
+      count = await prisma.chatMessage.count({
+        where: {
+          isAdmin: false, // User messages
+          isSeen: false,
+        },
+      });
+    } else {
+      // User: count unread admin messages
+      count = await prisma.chatMessage.count({
+        where: {
+          userId: req.user.id,
+          isSeen: false,
+          isAdmin: true, // Only count admin messages as unread for users
+        },
+      });
+    }
 
     res.json({ count });
   } catch (error) {
