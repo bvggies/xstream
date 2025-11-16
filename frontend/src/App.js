@@ -44,8 +44,8 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <Router>
+      <Router>
+        <AuthProvider>
           <div className="min-h-screen flex flex-col">
             <Navbar />
             <main className="flex-grow pt-16">
@@ -161,11 +161,11 @@ function App() {
             },
           }}
         />
-      </Router>
-    </AuthProvider>
-    </ErrorBoundary>
-  );
-}
+          </AuthProvider>
+        </Router>
+      </ErrorBoundary>
+    );
+  }
 
 export default App;
 
