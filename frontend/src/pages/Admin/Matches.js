@@ -18,7 +18,7 @@ const AdminMatches = () => {
 
   const fetchMatches = async () => {
     try {
-      const response = await axiosInstance.get('/matches');
+      const response = await axiosInstance.get('/admin/matches');
       setMatches(response.data.matches || []);
     } catch (error) {
       toast.error('Failed to fetch matches');

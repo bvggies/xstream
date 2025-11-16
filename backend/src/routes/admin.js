@@ -6,6 +6,7 @@ const {
   updateUser,
   banUser,
   unbanUser,
+  getAllMatches,
   createMatch,
   updateMatch,
   endMatch,
@@ -42,6 +43,7 @@ router.put('/users/:id', updateUser);
 router.put('/users/:id/ban', banUser);
 router.put('/users/:id/unban', unbanUser);
 
+router.get('/matches', getAllMatches);
 router.post('/matches', upload.single('thumbnail'), [
   body('title').notEmpty(),
   body('homeTeam').notEmpty(),

@@ -21,9 +21,35 @@ const getMatches = async (req, res, next) => {
       where.league = league;
     }
 
-    // Hide expired UPCOMING matches, but keep LIVE matches until they're finished
-    if (status === 'UPCOMING' || (!status && where.status.in)) {
+    // For UPCOMING status, only show future matches
+    if (status === 'UPCOMING') {
       where.matchDate = { gte: new Date() };
+    } else if (status === 'LIVE') {
+      // LIVE matches: show regardless of date (they stay until manually ended)
+      // Also include UPCOMING matches that have started (matchDate <= now) - treat as LIVE
+      where.OR = [
+        { status: 'LIVE' },
+        {
+          status: 'UPCOMING',
+          matchDate: { lte: new Date() },
+        },
+      ];
+      delete where.status;
+    } else if (!status && where.status.in) {
+      // Default: show LIVE matches (regardless of date) and UPCOMING matches (future dates)
+      // Also include UPCOMING matches that have started (matchDate <= now) - treat as LIVE
+      where.OR = [
+        { status: 'LIVE' },
+        {
+          status: 'UPCOMING',
+          matchDate: { gte: new Date() },
+        },
+        {
+          status: 'UPCOMING',
+          matchDate: { lte: new Date() },
+        },
+      ];
+      delete where.status;
     }
     // LIVE matches stay visible until status is changed to FINISHED
 

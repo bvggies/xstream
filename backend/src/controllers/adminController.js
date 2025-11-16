@@ -172,6 +172,54 @@ const unbanUser = async (req, res, next) => {
   }
 };
 
+const getAllMatches = async (req, res, next) => {
+  try {
+    const { status, league, search } = req.query;
+    const where = {};
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (league) {
+      where.league = league;
+    }
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { homeTeam: { contains: search, mode: 'insensitive' } },
+        { awayTeam: { contains: search, mode: 'insensitive' } },
+        { league: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const matches = await prisma.match.findMany({
+      where,
+      include: {
+        streamingLinks: {
+          where: { isActive: true },
+          select: {
+            id: true,
+            url: true,
+            type: true,
+            quality: true,
+            views: true,
+          },
+        },
+      },
+      orderBy: [
+        { status: 'asc' }, // LIVE first
+        { matchDate: 'desc' }, // Most recent first
+      ],
+    });
+
+    res.json({ matches });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const createMatch = async (req, res, next) => {
   try {
     const { title, homeTeam, awayTeam, homeTeamLogo, awayTeamLogo, league, leagueLogo, matchDate, endTime, status = 'UPCOMING' } = req.body;
