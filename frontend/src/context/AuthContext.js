@@ -58,9 +58,14 @@ export const AuthProvider = ({ children }) => {
       initSocket();
       return { success: true };
     } catch (error) {
+      console.error('Registration error:', error);
+      const errorMessage = error.response?.data?.error 
+        || error.response?.data?.errors?.[0]?.msg
+        || error.message 
+        || 'Registration failed';
       return {
         success: false,
-        error: error.response?.data?.error || 'Registration failed',
+        error: errorMessage,
       };
     }
   };

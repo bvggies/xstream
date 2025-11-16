@@ -45,8 +45,13 @@ const register = async (req, res, next) => {
       },
     });
 
-    // Send verification email
-    await sendVerificationEmail(user.email, verifyToken);
+    // Send verification email (don't fail registration if email fails)
+    try {
+      await sendVerificationEmail(user.email, verifyToken);
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError);
+      // Continue with registration even if email fails
+    }
 
     // Generate tokens
     const accessToken = generateAccessToken({ userId: user.id, role: user.role });
