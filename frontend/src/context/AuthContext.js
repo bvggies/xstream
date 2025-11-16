@@ -23,16 +23,37 @@ export const AuthProvider = ({ children }) => {
   const checkAuth = async () => {
     try {
       const response = await axiosInstance.get('/auth/me');
-      setUser(response.data.user);
-      
-      // Initialize socket if user is authenticated
       if (response.data.user) {
-        // Token is in httpOnly cookie, socket will get it from cookie
+        setUser(response.data.user);
+        // Initialize socket if user is authenticated
         initSocket();
+      } else {
+        setUser(null);
       }
     } catch (error) {
-      // If /auth/me fails, user is not authenticated
-      setUser(null);
+      // If /auth/me fails, try to refresh token first
+      if (error.response?.status === 401) {
+        try {
+          // Try to refresh the token
+          await axiosInstance.post('/auth/refresh');
+          // Retry getting user info
+          const retryResponse = await axiosInstance.get('/auth/me');
+          if (retryResponse.data.user) {
+            setUser(retryResponse.data.user);
+            initSocket();
+          } else {
+            setUser(null);
+          }
+        } catch (refreshError) {
+          // Refresh failed, user is not authenticated
+          console.log('Auth check failed:', refreshError);
+          setUser(null);
+        }
+      } else {
+        // Other errors - user is not authenticated
+        console.log('Auth check failed:', error);
+        setUser(null);
+      }
     } finally {
       // Always set loading to false after checkAuth completes
       setLoading(false);

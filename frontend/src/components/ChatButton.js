@@ -82,24 +82,42 @@ const ChatButton = () => {
 
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!inputMessage.trim() || !socket) return;
+    const messageText = inputMessage.trim();
+    if (!messageText) return;
+
+    // Check if socket is available
+    if (!socket) {
+      toast.error('Connection not available. Please refresh the page.');
+      return;
+    }
 
     setLoading(true);
+    const messageToSend = messageText; // Store before clearing
+    
     try {
+      // Clear input immediately for better UX
+      setInputMessage('');
+      
       const response = await axiosInstance.post('/chat/send', {
-        message: inputMessage,
+        message: messageToSend,
       });
 
+      // Add message to local state
       setMessages((prev) => [...prev, response.data.message]);
-      setInputMessage('');
 
-      if (socket) {
+      // Emit socket event
+      if (socket && socket.connected) {
         socket.emit('send_message', {
-          message: inputMessage,
+          message: messageToSend,
         });
+      } else {
+        console.warn('Socket not connected, message saved but not broadcasted');
       }
     } catch (error) {
-      toast.error('Failed to send message');
+      // Restore input message on error
+      setInputMessage(messageToSend);
+      const errorMsg = error.response?.data?.error || 'Failed to send message';
+      toast.error(errorMsg);
       console.error('Failed to send message:', error);
     } finally {
       setLoading(false);

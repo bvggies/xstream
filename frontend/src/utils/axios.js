@@ -75,7 +75,8 @@ axiosInstance.interceptors.response.use(
 
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Only try to refresh token for 401 errors, and don't retry if it's already a refresh request
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh')) {
       originalRequest._retry = true;
 
       try {
@@ -84,10 +85,9 @@ axiosInstance.interceptors.response.use(
         // Retry original request
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, redirect to login
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
-        }
+        // Refresh failed - clear retry flag and let the error propagate
+        originalRequest._retry = false;
+        // Don't redirect here - let the component handle it
         return Promise.reject(refreshError);
       }
     }
