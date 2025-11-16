@@ -36,8 +36,10 @@ const ChatButton = () => {
     } else {
       // If socket not available, poll for new messages (especially for admins)
       const pollInterval = setInterval(() => {
-        fetchChatHistory();
-        fetchUnreadCount();
+        if (user) {
+          fetchChatHistory();
+          fetchUnreadCount();
+        }
       }, 5000); // Poll every 5 seconds
 
       return () => clearInterval(pollInterval);
@@ -53,6 +55,8 @@ const ChatButton = () => {
 
   // Filter conversations based on search query
   useEffect(() => {
+    if (!user || !user.role) return;
+    
     if (user.role === 'ADMIN' && userConversations.length > 0) {
       if (!searchQuery.trim()) {
         setFilteredConversations(userConversations);
@@ -81,7 +85,7 @@ const ChatButton = () => {
   const fetchChatHistory = async () => {
     try {
       const response = await axiosInstance.get('/chat/history');
-      if (user.role === 'ADMIN' && response.data.isAdmin) {
+      if (user && user.role === 'ADMIN' && response.data.isAdmin) {
         // Admin view - messages are grouped by user
         const conversations = response.data.messages || [];
         setUserConversations(conversations);
@@ -124,8 +128,10 @@ const ChatButton = () => {
     }
   };
 
-  const handleNewMessage = (message) => {
-    if (user.role === 'ADMIN') {
+      const handleNewMessage = (message) => {
+        if (!user || !user.role) return;
+        
+        if (user.role === 'ADMIN') {
       // Update the conversation for the user who sent the message
       setUserConversations((prev) => {
         const updated = prev.map((conv) => {
@@ -392,20 +398,20 @@ const ChatButton = () => {
                     <FiMessageCircle className="text-white" />
                   </div>
                   <div>
-                    <h3 className="text-white font-bold">
-                      {user.role === 'ADMIN' 
-                        ? selectedUserId 
-                          ? userConversations.find(c => c.userId === selectedUserId)?.username || 'Select User'
-                          : 'Admin Chat'
-                        : 'Support Chat'}
-                    </h3>
-                    <p className="text-white/80 text-xs">
-                      {user.role === 'ADMIN' 
-                        ? selectedUserId 
-                          ? userConversations.find(c => c.userId === selectedUserId)?.email || ''
-                          : 'Select a user to chat'
-                        : "We'll respond soon"}
-                    </p>
+                        <h3 className="text-white font-bold">
+                          {user && user.role === 'ADMIN' 
+                            ? selectedUserId 
+                              ? userConversations.find(c => c.userId === selectedUserId)?.username || 'Select User'
+                              : 'Admin Chat'
+                            : 'Support Chat'}
+                        </h3>
+                        <p className="text-white/80 text-xs">
+                          {user && user.role === 'ADMIN' 
+                            ? selectedUserId 
+                              ? userConversations.find(c => c.userId === selectedUserId)?.email || ''
+                              : 'Select a user to chat'
+                            : "We'll respond soon"}
+                        </p>
                   </div>
                 </div>
                 <button

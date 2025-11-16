@@ -86,7 +86,7 @@ const Navbar = () => {
                   <FiLayout className="w-4 h-4" />
                   <span className="font-medium">Dashboard</span>
                 </Link>
-                {user.role === 'ADMIN' && (
+                {user && user.role === 'ADMIN' && (
                   <Link
                     to="/admin"
                     className="flex items-center space-x-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 rounded-lg text-white transition-all shadow-lg hover:shadow-primary-500/50"
@@ -289,7 +289,7 @@ const Navbar = () => {
                 >
                   Profile
                 </Link>
-                {user.role === 'ADMIN' && (
+                {user && user.role === 'ADMIN' && (
                   <Link
                     to="/admin"
                     className="flex items-center space-x-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 rounded-lg text-white transition-all shadow-lg hover:shadow-primary-500/50 mt-2"
