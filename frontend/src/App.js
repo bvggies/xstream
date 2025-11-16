@@ -43,8 +43,8 @@ function App() {
   }, []);
 
   return (
-    <ErrorBoundary>
-      <Router>
+    <Router>
+      <ErrorBoundary>
         <AuthProvider>
           <div className="min-h-screen flex flex-col">
             <Navbar />
@@ -161,11 +161,11 @@ function App() {
             },
           }}
         />
-          </AuthProvider>
-        </Router>
+        </AuthProvider>
       </ErrorBoundary>
-    );
-  }
+    </Router>
+  );
+}
 
 export default App;
 

@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -31,9 +30,12 @@ class ErrorBoundary extends React.Component {
               >
                 Reload Page
               </button>
-              <Link to="/" className="btn-secondary">
+              <button
+                onClick={() => window.location.href = '/'}
+                className="btn-secondary"
+              >
                 Go Home
-              </Link>
+              </button>
             </div>
           </div>
         </div>
