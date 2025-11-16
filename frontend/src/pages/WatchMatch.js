@@ -19,6 +19,8 @@ const WatchMatch = () => {
   const [loading, setLoading] = useState(true);
   const [countdown, setCountdown] = useState(null);
   const [accessGranted, setAccessGranted] = useState(false);
+  const [playerType, setPlayerType] = useState('video'); // 'video', 'youtube', 'iframe'
+  const [embedUrl, setEmbedUrl] = useState(null);
 
   useEffect(() => {
     fetchMatch();
@@ -46,10 +48,10 @@ const WatchMatch = () => {
   }, [match]);
 
   useEffect(() => {
-    if (selectedLink && videoRef.current) {
+    if (selectedLink) {
       loadStream();
     }
-  }, [selectedLink]);
+  }, [selectedLink, accessGranted, match?.status]);
 
   const fetchMatch = async () => {
     try {
@@ -72,21 +74,118 @@ const WatchMatch = () => {
     }
   };
 
-  const loadStream = () => {
-    if (!videoRef.current || !selectedLink) return;
+  // Helper function to extract YouTube video ID
+  const extractYouTubeId = (url) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return match && match[2].length === 11 ? match[2] : null;
+  };
 
+  // Helper function to detect link type
+  const detectLinkType = (url, type) => {
+    const urlLower = url.toLowerCase();
+    
+    // Check for YouTube
+    if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
+      return 'youtube';
+    }
+    
+    // Check for Vimeo
+    if (urlLower.includes('vimeo.com')) {
+      return 'vimeo';
+    }
+    
+    // Check for IPTV/HLS streams
+    if (type === 'HLS' || type === 'M3U8' || urlLower.includes('.m3u8') || urlLower.includes('hls')) {
+      return 'hls';
+    }
+    
+    // Check for iframe type
+    if (type === 'IFRAME') {
+      return 'iframe';
+    }
+    
+    // Default to direct video
+    return 'video';
+  };
+
+  // Helper function to get embed URL
+  const getEmbedUrl = (url, type) => {
+    const linkType = detectLinkType(url, type);
+    
+    if (linkType === 'youtube') {
+      const videoId = extractYouTubeId(url);
+      if (videoId) {
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+      }
+    }
+    
+    if (linkType === 'vimeo') {
+      const vimeoId = url.match(/vimeo.com\/(\d+)/)?.[1];
+      if (vimeoId) {
+        return `https://player.vimeo.com/video/${vimeoId}?autoplay=1&title=0&byline=0&portrait=0`;
+      }
+    }
+    
+    return null;
+  };
+
+  const loadStream = () => {
+    if (!selectedLink) return;
+
+    // Clean up previous HLS instance
     if (hls) {
       hls.destroy();
+      setHls(null);
     }
 
-    if (selectedLink.type === 'HLS' || selectedLink.type === 'M3U8') {
+    const url = selectedLink.url;
+    const type = selectedLink.type;
+    const linkType = detectLinkType(url, type);
+
+    // Handle YouTube
+    if (linkType === 'youtube') {
+      const embed = getEmbedUrl(url, type);
+      if (embed) {
+        setPlayerType('youtube');
+        setEmbedUrl(embed);
+        return;
+      }
+    }
+
+    // Handle Vimeo
+    if (linkType === 'vimeo') {
+      const embed = getEmbedUrl(url, type);
+      if (embed) {
+        setPlayerType('iframe');
+        setEmbedUrl(embed);
+        return;
+      }
+    }
+
+    // Handle iframe type
+    if (linkType === 'iframe' || type === 'IFRAME') {
+      setPlayerType('iframe');
+      setEmbedUrl(url);
+      return;
+    }
+
+    // Handle HLS/M3U8 streams
+    if (linkType === 'hls' && videoRef.current) {
+      setPlayerType('video');
+      setEmbedUrl(null);
+      
       if (Hls.isSupported()) {
         const hlsInstance = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
+          xhrSetup: (xhr, url) => {
+            // Allow CORS for IPTV links
+            xhr.withCredentials = false;
+          },
         });
 
-        hlsInstance.loadSource(selectedLink.url);
+        hlsInstance.loadSource(url);
         hlsInstance.attachMedia(videoRef.current);
 
         hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -94,7 +193,6 @@ const WatchMatch = () => {
           if (match?.status === 'LIVE' || accessGranted) {
             videoRef.current?.play().catch((err) => {
               console.log('Auto-play prevented:', err);
-              // Browser may block auto-play, user will need to click play
             });
           }
         });
@@ -119,23 +217,23 @@ const WatchMatch = () => {
         });
 
         setHls(hlsInstance);
-      } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+      } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
         // Native HLS support (Safari)
-        videoRef.current.src = selectedLink.url;
-        // Auto-play if match is LIVE or if access is granted (2 minutes before)
+        videoRef.current.src = url;
         if (match?.status === 'LIVE' || accessGranted) {
           videoRef.current.play().catch((err) => {
             console.log('Auto-play prevented:', err);
           });
         }
       }
-    } else if (selectedLink.type === 'IFRAME') {
-      // Handle iframe type
-      toast.info('Iframe stream - opening in new window');
-      window.open(selectedLink.url, '_blank');
-    } else {
-      // Direct video
-      videoRef.current.src = selectedLink.url;
+      return;
+    }
+
+    // Handle direct video (MP4, etc.)
+    if (videoRef.current) {
+      setPlayerType('video');
+      setEmbedUrl(null);
+      videoRef.current.src = url;
       // Auto-play if match is LIVE or if access is granted (2 minutes before)
       if (match?.status === 'LIVE' || accessGranted) {
         videoRef.current.play().catch((err) => {
@@ -306,12 +404,23 @@ const WatchMatch = () => {
                 {accessGranted || match.status === 'LIVE' || match.status === 'FINISHED' ? (
                   selectedLink ? (
                     <>
-                      {selectedLink.type === 'IFRAME' ? (
+                      {playerType === 'youtube' && embedUrl ? (
                         <iframe
-                          src={selectedLink.url}
+                          src={embedUrl}
                           className="w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowFullScreen
                           title={match.title}
+                          frameBorder="0"
+                        />
+                      ) : playerType === 'iframe' && embedUrl ? (
+                        <iframe
+                          src={embedUrl}
+                          className="w-full h-full"
+                          allow="autoplay; fullscreen; picture-in-picture"
+                          allowFullScreen
+                          title={match.title}
+                          frameBorder="0"
                         />
                       ) : (
                         <video
@@ -319,6 +428,7 @@ const WatchMatch = () => {
                           controls
                           className="w-full h-full"
                           playsInline
+                          crossOrigin="anonymous"
                         />
                       )}
                     </>
