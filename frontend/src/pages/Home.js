@@ -12,9 +12,16 @@ const Home = () => {
   const [highlightsLoading, setHighlightsLoading] = useState(true);
 
   useEffect(() => {
-    fetchMatches();
-    fetchFeaturedHighlights();
-    const interval = setInterval(fetchMatches, 5 * 60 * 1000); // Refresh every 5 minutes
+    // Fetch data but don't block rendering if it fails
+    Promise.allSettled([
+      fetchMatches().catch(err => console.error('Matches fetch error:', err)),
+      fetchFeaturedHighlights().catch(err => console.error('Highlights fetch error:', err))
+    ]);
+    
+    const interval = setInterval(() => {
+      fetchMatches().catch(err => console.error('Matches fetch error:', err));
+    }, 5 * 60 * 1000); // Refresh every 5 minutes
+    
     return () => clearInterval(interval);
   }, []);
 
@@ -51,21 +58,6 @@ const Home = () => {
   // Sort upcoming matches by date
   if (upcomingMatches.length > 0) {
     upcomingMatches.sort((a, b) => new Date(a.matchDate) - new Date(b.matchDate));
-  }
-
-  // Debug: Log current state
-  console.log('Home component rendering:', { matches, highlights, loading, highlightsLoading });
-
-  // Ensure we always render something
-  if (typeof matches === 'undefined') {
-    return (
-      <div className="min-h-screen bg-dark-900 text-white flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4">Loading...</h1>
-          <p className="text-dark-400">Please wait while we load the content.</p>
-        </div>
-      </div>
-    );
   }
 
   return (
