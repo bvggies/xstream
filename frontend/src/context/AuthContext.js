@@ -62,20 +62,49 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
+      console.log('Attempting login for:', email);
       const response = await axiosInstance.post('/auth/login', { email, password });
-      setUser(response.data.user);
-      setLoading(false); // Ensure loading is false after successful login
-      initSocket();
-      return { 
-        success: true, 
-        user: response.data.user,
-        redirectTo: response.data.redirectTo || (response.data.user.role === 'ADMIN' ? '/admin' : '/dashboard')
-      };
+      console.log('Login response:', response.data);
+      
+      if (response.data.user) {
+        setUser(response.data.user);
+        setLoading(false);
+        initSocket();
+        return { 
+          success: true, 
+          user: response.data.user,
+          redirectTo: response.data.redirectTo || (response.data.user.role === 'ADMIN' ? '/admin' : '/dashboard')
+        };
+      } else {
+        setLoading(false);
+        return {
+          success: false,
+          error: 'Login failed: No user data received',
+        };
+      }
     } catch (error) {
-      setLoading(false); // Ensure loading is false even on error
+      console.error('Login error:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      setLoading(false);
+      
+      // Extract more specific error message
+      let errorMessage = 'Login failed';
+      
+      if (error.response) {
+        // Server responded with error
+        errorMessage = error.response.data?.error || error.response.data?.message || `Server error: ${error.response.status}`;
+      } else if (error.request) {
+        // Request made but no response
+        errorMessage = 'Cannot connect to server. Please check your connection and try again.';
+      } else {
+        // Something else happened
+        errorMessage = error.message || 'An unexpected error occurred';
+      }
+      
       return {
         success: false,
-        error: error.response?.data?.error || 'Login failed',
+        error: errorMessage,
       };
     }
   };
