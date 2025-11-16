@@ -169,35 +169,38 @@ The application uses Prisma with PostgreSQL. Key models:
 
 ## 🚀 Deployment
 
-### Backend Deployment (Vercel/Render)
+Deploy using **GitHub**, **Vercel**, and **Neon PostgreSQL**.
 
-1. **Vercel**:
-   - Connect your GitHub repository
-   - Set build command: `cd backend && npm install && npm run prisma:generate`
-   - Set start command: `cd backend && npm start`
-   - Add environment variables from `.env`
+### Quick Deployment Steps
 
-2. **Render**:
-   - Create new Web Service
-   - Connect repository
-   - Build command: `cd backend && npm install && npm run prisma:generate`
-   - Start command: `cd backend && npm start`
-   - Add environment variables
+1. **Push code to GitHub**:
+   ```bash
+   git push origin main
+   ```
 
-### Frontend Deployment (Vercel)
+2. **Set up Neon PostgreSQL**:
+   - Create account at [neon.tech](https://neon.tech)
+   - Create new project
+   - Copy connection string
 
-1. Connect GitHub repository
-2. Set root directory to `frontend`
-3. Build command: `npm install && npm run build`
-4. Output directory: `build`
-5. Add environment variable: `REACT_APP_API_URL` (your backend URL)
+3. **Deploy Backend to Vercel**:
+   - Import GitHub repository
+   - Set root directory: `backend`
+   - Build command: `npm install && npm run prisma:generate`
+   - Add environment variables (see DEPLOYMENT.md)
 
-### Database (Neon PostgreSQL)
+4. **Deploy Frontend to Vercel**:
+   - Import same GitHub repository
+   - Set root directory: `frontend`
+   - Build command: `npm install && npm run build`
+   - Add `REACT_APP_API_URL` environment variable
 
-1. Create account at [neon.tech](https://neon.tech)
-2. Create new project
-3. Copy connection string to `DATABASE_URL` in backend `.env`
-4. Run migrations: `npm run prisma:migrate`
+5. **Run Database Migrations**:
+   ```bash
+   npx prisma migrate deploy
+   ```
+
+**📖 For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md)**
 
 ## 📝 Environment Variables
 
