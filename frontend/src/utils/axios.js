@@ -1,6 +1,19 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// Get API URL from environment variable
+let API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+// Ensure API URL ends with /api and has no trailing slash
+if (API_URL && !API_URL.endsWith('/api')) {
+  // If it ends with just /, remove it and add /api
+  if (API_URL.endsWith('/')) {
+    API_URL = API_URL.slice(0, -1) + '/api';
+  } else {
+    API_URL = API_URL + '/api';
+  }
+}
+// Remove trailing slash if present
+API_URL = API_URL.replace(/\/$/, '');
 
 console.log('API URL:', API_URL); // Debug log
 
@@ -38,10 +51,12 @@ axiosInstance.interceptors.response.use(
       console.error('Base URL:', error.config?.baseURL);
       
       // Show more helpful error message
+      const backendUrl = error.config?.baseURL || API_URL;
       error.message = `Cannot connect to server. Please check:
-1. Backend is running at: ${error.config?.baseURL || API_URL}
+1. Backend is running at: ${backendUrl}
 2. CORS is configured correctly
-3. Network connection is active`;
+3. Network connection is active
+4. Backend URL in .env file is correct`;
     }
 
     const originalRequest = error.config;
