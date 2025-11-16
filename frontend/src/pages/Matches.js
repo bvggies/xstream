@@ -140,14 +140,53 @@ const MatchCard = ({ match, index }) => {
         </div>
       )}
 
-      <div className="mb-2">
+      {/* League Logo */}
+      <div className="mb-3 flex items-center space-x-2">
+        {match.leagueLogo && (
+          <div className="w-6 h-6 rounded-full bg-white p-0.5 flex items-center justify-center overflow-hidden">
+            <img 
+              src={match.leagueLogo} 
+              alt={match.league} 
+              className="w-full h-full object-contain"
+              onError={(e) => e.target.style.display = 'none'}
+            />
+          </div>
+        )}
         <span className="text-primary-400 text-sm font-semibold">{match.league}</span>
       </div>
 
-      <h3 className="text-xl font-bold text-white mb-2">{match.title}</h3>
-      <p className="text-dark-400 text-sm mb-4">
-        {match.homeTeam} vs {match.awayTeam}
-      </p>
+      <h3 className="text-xl font-bold text-white mb-3">{match.title}</h3>
+      
+      {/* Teams with Logos */}
+      <div className="flex items-center justify-center space-x-3 mb-4">
+        <div className="flex items-center space-x-2">
+          {match.homeTeamLogo && (
+            <div className="w-8 h-8 rounded-full bg-white p-1 flex items-center justify-center overflow-hidden border border-dark-600">
+              <img 
+                src={match.homeTeamLogo} 
+                alt={match.homeTeam} 
+                className="w-full h-full object-contain"
+                onError={(e) => e.target.style.display = 'none'}
+              />
+            </div>
+          )}
+          <span className="text-white text-sm font-medium">{match.homeTeam}</span>
+        </div>
+        <span className="text-dark-400 text-sm">vs</span>
+        <div className="flex items-center space-x-2">
+          {match.awayTeamLogo && (
+            <div className="w-8 h-8 rounded-full bg-white p-1 flex items-center justify-center overflow-hidden border border-dark-600">
+              <img 
+                src={match.awayTeamLogo} 
+                alt={match.awayTeam} 
+                className="w-full h-full object-contain"
+                onError={(e) => e.target.style.display = 'none'}
+              />
+            </div>
+          )}
+          <span className="text-white text-sm font-medium">{match.awayTeam}</span>
+        </div>
+      </div>
 
       <div className="flex items-center justify-between">
         <div className="flex items-center text-dark-400 text-sm">
