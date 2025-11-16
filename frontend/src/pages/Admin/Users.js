@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import axiosInstance from '../../utils/axios';
 import toast from 'react-hot-toast';
 import AdminSidebar from '../../components/Admin/AdminSidebar';
-import { FiBan, FiUnlock, FiSearch } from 'react-icons/fi';
+import { FiXCircle, FiUnlock, FiSearch } from 'react-icons/fi';
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
@@ -138,7 +138,7 @@ const AdminUsers = () => {
                             className="p-2 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-red-400 transition-colors"
                             title="Ban"
                           >
-                            <FiBan />
+                            <FiXCircle />
                           </button>
                         )}
                       </div>
