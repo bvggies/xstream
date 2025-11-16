@@ -46,23 +46,53 @@ const MatchModal = ({ match, onClose }) => {
         formDataToSend.append('thumbnail', thumbnailInput.files[0]);
       }
 
+      let matchId;
       if (match) {
-        await axiosInstance.put(`/admin/matches/${match.id}`, formDataToSend, {
+        // Update existing match
+        const updateResponse = await axiosInstance.put(`/admin/matches/${match.id}`, formDataToSend, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
+        matchId = match.id;
         toast.success('Match updated');
+        
+        // Update streaming links - delete old ones and add new ones
+        if (match.streamingLinks) {
+          // Delete existing links
+          for (const link of match.streamingLinks) {
+            try {
+              await axiosInstance.delete(`/admin/matches/${matchId}/links/${link.id}`);
+            } catch (err) {
+              console.error('Failed to delete link:', err);
+            }
+          }
+        }
       } else {
+        // Create new match
         const response = await axiosInstance.post('/admin/matches', formDataToSend, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
+        matchId = response.data.match.id;
         toast.success('Match created');
-        // Add streaming links if any
-        if (streamingLinks.length > 0) {
-          for (const link of streamingLinks) {
-            await axiosInstance.post(`/admin/matches/${response.data.match.id}/links`, link);
+      }
+      
+      // Add all streaming links
+      if (streamingLinks.length > 0) {
+        for (const link of streamingLinks) {
+          if (link.url && link.url.trim()) {
+            try {
+              await axiosInstance.post(`/admin/matches/${matchId}/links`, {
+                url: link.url,
+                type: link.type,
+                quality: link.quality || 'HD',
+              });
+            } catch (err) {
+              console.error('Failed to add link:', err);
+              toast.error(`Failed to add link: ${link.url}`);
+            }
           }
         }
       }
+      
       onClose();
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to save match');
@@ -173,34 +203,51 @@ const MatchModal = ({ match, onClose }) => {
 
             {/* Streaming Links */}
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Streaming Links</label>
-              <div className="space-y-2 mb-4">
+              <label className="block text-sm font-medium text-white mb-2">
+                Streaming Links ({streamingLinks.length})
+              </label>
+              <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
                 {streamingLinks.map((link, index) => (
-                  <div key={index} className="flex items-center space-x-2 bg-dark-700 p-2 rounded">
-                    <span className="text-white flex-1">{link.url}</span>
-                    <span className="text-dark-400 text-sm">{link.quality}</span>
+                  <div key={index} className="flex items-center space-x-2 bg-dark-700 p-3 rounded-lg border border-dark-600">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm truncate" title={link.url}>{link.url}</p>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <span className="text-dark-400 text-xs px-2 py-0.5 bg-dark-800 rounded">{link.type}</span>
+                        <span className="text-dark-400 text-xs px-2 py-0.5 bg-dark-800 rounded">{link.quality || 'HD'}</span>
+                      </div>
+                    </div>
                     <button
                       type="button"
                       onClick={() => removeStreamingLink(index)}
-                      className="text-red-400 hover:text-red-300"
+                      className="text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
+                      title="Remove link"
                     >
-                      Remove
+                      ✕
                     </button>
                   </div>
                 ))}
+                {streamingLinks.length === 0 && (
+                  <p className="text-dark-400 text-sm text-center py-4">No streaming links added yet</p>
+                )}
               </div>
-              <div className="flex space-x-2">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
                 <input
                   type="url"
                   value={newLink.url}
                   onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
-                  placeholder="Stream URL"
-                  className="input-field flex-1"
+                  placeholder="Stream URL (e.g., https://example.com/stream.m3u8)"
+                  className="input-field md:col-span-6"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addStreamingLink();
+                    }
+                  }}
                 />
                 <select
                   value={newLink.type}
                   onChange={(e) => setNewLink({ ...newLink, type: e.target.value })}
-                  className="input-field w-32"
+                  className="input-field md:col-span-3"
                 >
                   <option value="HLS">HLS</option>
                   <option value="M3U8">M3U8</option>
@@ -212,16 +259,20 @@ const MatchModal = ({ match, onClose }) => {
                   value={newLink.quality}
                   onChange={(e) => setNewLink({ ...newLink, quality: e.target.value })}
                   placeholder="Quality"
-                  className="input-field w-24"
+                  className="input-field md:col-span-2"
                 />
                 <button
                   type="button"
                   onClick={addStreamingLink}
-                  className="btn-secondary"
+                  disabled={!newLink.url.trim()}
+                  className="btn-secondary md:col-span-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Add
                 </button>
               </div>
+              <p className="text-dark-400 text-xs mt-2">
+                💡 Tip: Add multiple links so users can switch if one fails
+              </p>
             </div>
 
             <div className="flex justify-end space-x-4">
