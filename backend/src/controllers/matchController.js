@@ -54,7 +54,18 @@ const getMatchById = async (req, res, next) => {
 
     const match = await prisma.match.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        homeTeam: true,
+        awayTeam: true,
+        homeTeamLogo: true,
+        awayTeamLogo: true,
+        league: true,
+        leagueLogo: true,
+        thumbnail: true,
+        status: true,
+        matchDate: true,
         streamingLinks: {
           where: { isActive: true },
           select: {

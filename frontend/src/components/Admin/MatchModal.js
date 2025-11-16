@@ -9,7 +9,10 @@ const MatchModal = ({ match, onClose }) => {
     title: '',
     homeTeam: '',
     awayTeam: '',
+    homeTeamLogo: '',
+    awayTeamLogo: '',
     league: '',
+    leagueLogo: '',
     matchDate: '',
     status: 'UPCOMING',
   });
@@ -23,7 +26,10 @@ const MatchModal = ({ match, onClose }) => {
         title: match.title || '',
         homeTeam: match.homeTeam || '',
         awayTeam: match.awayTeam || '',
+        homeTeamLogo: match.homeTeamLogo || '',
+        awayTeamLogo: match.awayTeamLogo || '',
         league: match.league || '',
+        leagueLogo: match.leagueLogo || '',
         matchDate: match.matchDate ? new Date(match.matchDate).toISOString().slice(0, 16) : '',
         status: match.status || 'UPCOMING',
       });
@@ -153,6 +159,19 @@ const MatchModal = ({ match, onClose }) => {
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-white mb-2">League Logo URL</label>
+                <input
+                  type="url"
+                  value={formData.leagueLogo}
+                  onChange={(e) => setFormData({ ...formData, leagueLogo: e.target.value })}
+                  placeholder="https://example.com/logo.png"
+                  className="input-field"
+                />
+                {formData.leagueLogo && (
+                  <img src={formData.leagueLogo} alt="League logo" className="mt-2 h-12 w-auto rounded" onError={(e) => e.target.style.display = 'none'} />
+                )}
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-white mb-2">Home Team</label>
                 <input
                   type="text"
@@ -163,6 +182,19 @@ const MatchModal = ({ match, onClose }) => {
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-white mb-2">Home Team Logo URL</label>
+                <input
+                  type="url"
+                  value={formData.homeTeamLogo}
+                  onChange={(e) => setFormData({ ...formData, homeTeamLogo: e.target.value })}
+                  placeholder="https://example.com/logo.png"
+                  className="input-field"
+                />
+                {formData.homeTeamLogo && (
+                  <img src={formData.homeTeamLogo} alt="Home team logo" className="mt-2 h-12 w-auto rounded" onError={(e) => e.target.style.display = 'none'} />
+                )}
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-white mb-2">Away Team</label>
                 <input
                   type="text"
@@ -171,6 +203,19 @@ const MatchModal = ({ match, onClose }) => {
                   className="input-field"
                   required
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Away Team Logo URL</label>
+                <input
+                  type="url"
+                  value={formData.awayTeamLogo}
+                  onChange={(e) => setFormData({ ...formData, awayTeamLogo: e.target.value })}
+                  placeholder="https://example.com/logo.png"
+                  className="input-field"
+                />
+                {formData.awayTeamLogo && (
+                  <img src={formData.awayTeamLogo} alt="Away team logo" className="mt-2 h-12 w-auto rounded" onError={(e) => e.target.style.display = 'none'} />
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-white mb-2">Match Date</label>

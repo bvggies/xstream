@@ -42,7 +42,10 @@ model Match {
   title         String
   homeTeam      String   @map("home_team")
   awayTeam      String   @map("away_team")
+  homeTeamLogo  String?  @map("home_team_logo")
+  awayTeamLogo  String?  @map("away_team_logo")
   league        String
+  leagueLogo    String?  @map("league_logo")
   thumbnail     String?
   status        MatchStatus @default(UPCOMING)
   matchDate     DateTime @map("match_date")

@@ -236,7 +236,11 @@ const WatchMatch = () => {
                     <span>{format(new Date(match.matchDate), 'h:mm a')}</span>
                   </div>
                   <div className="flex items-center">
-                    <span className="text-primary-500 mr-2">🏆</span>
+                    {match.leagueLogo ? (
+                      <img src={match.leagueLogo} alt={match.league} className="h-6 w-6 mr-2 object-contain" onError={(e) => e.target.style.display = 'none'} />
+                    ) : (
+                      <span className="text-primary-500 mr-2">🏆</span>
+                    )}
                     <span>{match.league}</span>
                   </div>
                 </div>
@@ -396,15 +400,30 @@ const WatchMatch = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-dark-800/50 rounded-lg p-4 border border-dark-700">
                   <p className="text-dark-400 text-sm mb-2">Home Team</p>
-                  <p className="text-white font-bold text-lg">{match.homeTeam}</p>
+                  <div className="flex items-center space-x-3">
+                    {match.homeTeamLogo && (
+                      <img src={match.homeTeamLogo} alt={match.homeTeam} className="h-10 w-10 object-contain" onError={(e) => e.target.style.display = 'none'} />
+                    )}
+                    <p className="text-white font-bold text-lg">{match.homeTeam}</p>
+                  </div>
                 </div>
                 <div className="bg-dark-800/50 rounded-lg p-4 border border-dark-700">
                   <p className="text-dark-400 text-sm mb-2">Away Team</p>
-                  <p className="text-white font-bold text-lg">{match.awayTeam}</p>
+                  <div className="flex items-center space-x-3">
+                    {match.awayTeamLogo && (
+                      <img src={match.awayTeamLogo} alt={match.awayTeam} className="h-10 w-10 object-contain" onError={(e) => e.target.style.display = 'none'} />
+                    )}
+                    <p className="text-white font-bold text-lg">{match.awayTeam}</p>
+                  </div>
                 </div>
                 <div className="bg-dark-800/50 rounded-lg p-4 border border-dark-700">
                   <p className="text-dark-400 text-sm mb-2">League</p>
-                  <p className="text-white font-semibold">{match.league}</p>
+                  <div className="flex items-center space-x-3">
+                    {match.leagueLogo && (
+                      <img src={match.leagueLogo} alt={match.league} className="h-8 w-8 object-contain" onError={(e) => e.target.style.display = 'none'} />
+                    )}
+                    <p className="text-white font-semibold">{match.league}</p>
+                  </div>
                 </div>
                 <div className="bg-dark-800/50 rounded-lg p-4 border border-dark-700">
                   <p className="text-dark-400 text-sm mb-2">Status</p>

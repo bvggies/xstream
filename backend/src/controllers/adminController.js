@@ -174,13 +174,16 @@ const unbanUser = async (req, res, next) => {
 
 const createMatch = async (req, res, next) => {
   try {
-    const { title, homeTeam, awayTeam, league, matchDate, status = 'UPCOMING' } = req.body;
+    const { title, homeTeam, awayTeam, homeTeamLogo, awayTeamLogo, league, leagueLogo, matchDate, status = 'UPCOMING' } = req.body;
 
     const matchData = {
       title,
       homeTeam,
       awayTeam,
+      homeTeamLogo: homeTeamLogo || null,
+      awayTeamLogo: awayTeamLogo || null,
       league,
+      leagueLogo: leagueLogo || null,
       matchDate: new Date(matchDate),
       status,
     };
@@ -211,13 +214,16 @@ const createMatch = async (req, res, next) => {
 const updateMatch = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { title, homeTeam, awayTeam, league, matchDate, status } = req.body;
+    const { title, homeTeam, awayTeam, homeTeamLogo, awayTeamLogo, league, leagueLogo, matchDate, status } = req.body;
 
     const updateData = {};
     if (title) updateData.title = title;
     if (homeTeam) updateData.homeTeam = homeTeam;
     if (awayTeam) updateData.awayTeam = awayTeam;
+    if (homeTeamLogo !== undefined) updateData.homeTeamLogo = homeTeamLogo || null;
+    if (awayTeamLogo !== undefined) updateData.awayTeamLogo = awayTeamLogo || null;
     if (league) updateData.league = league;
+    if (leagueLogo !== undefined) updateData.leagueLogo = leagueLogo || null;
     if (matchDate) updateData.matchDate = new Date(matchDate);
     if (status) updateData.status = status;
 
