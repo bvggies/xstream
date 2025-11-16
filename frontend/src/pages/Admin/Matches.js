@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import axiosInstance from '../../utils/axios';
 import toast from 'react-hot-toast';
 import AdminSidebar from '../../components/Admin/AdminSidebar';
-import { FiPlus, FiEdit, FiTrash2, FiPlay } from 'react-icons/fi';
+import { FiPlus, FiEdit, FiTrash2, FiPlay, FiStopCircle } from 'react-icons/fi';
 import MatchModal from '../../components/Admin/MatchModal';
 
 const AdminMatches = () => {
@@ -24,6 +24,18 @@ const AdminMatches = () => {
       toast.error('Failed to fetch matches');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEndMatch = async (id) => {
+    if (!window.confirm('Are you sure you want to end this match? It will be moved to finished matches.')) return;
+
+    try {
+      await axiosInstance.put(`/admin/matches/${id}/end`);
+      toast.success('Match ended');
+      fetchMatches();
+    } catch (error) {
+      toast.error('Failed to end match');
     }
   };
 
@@ -110,6 +122,15 @@ const AdminMatches = () => {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center justify-end space-x-2">
+                        {match.status === 'LIVE' && (
+                          <button
+                            onClick={() => handleEndMatch(match.id)}
+                            className="p-2 bg-orange-500/20 hover:bg-orange-500/30 rounded-lg text-orange-400 transition-colors"
+                            title="End Match"
+                          >
+                            <FiStopCircle />
+                          </button>
+                        )}
                         <button
                           onClick={() => handleEdit(match)}
                           className="p-2 bg-dark-700 hover:bg-dark-600 rounded-lg text-white transition-colors"

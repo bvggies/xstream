@@ -16,6 +16,7 @@ const MatchModal = ({ match, onClose }) => {
     league: '',
     leagueLogo: '',
     matchDate: '',
+    endTime: '',
     status: 'UPCOMING',
   });
   const [streamingLinks, setStreamingLinks] = useState([]);
@@ -37,6 +38,7 @@ const MatchModal = ({ match, onClose }) => {
         league: match.league || '',
         leagueLogo: match.leagueLogo || getLeagueLogo(match.league) || '',
         matchDate: match.matchDate ? new Date(match.matchDate).toISOString().slice(0, 16) : '',
+        endTime: match.endTime ? new Date(match.endTime).toISOString().slice(0, 16) : '',
         status: match.status || 'UPCOMING',
       });
       setStreamingLinks(match.streamingLinks || []);
@@ -585,6 +587,16 @@ const MatchModal = ({ match, onClose }) => {
                   className="input-field"
                   required
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">End Time (optional)</label>
+                <input
+                  type="datetime-local"
+                  value={formData.endTime}
+                  onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                  className="input-field"
+                />
+                <p className="text-dark-400 text-xs mt-1">Expected end time for the match</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-white mb-2">Status</label>

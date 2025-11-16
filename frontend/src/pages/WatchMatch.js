@@ -90,7 +90,13 @@ const WatchMatch = () => {
         hlsInstance.attachMedia(videoRef.current);
 
         hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-          videoRef.current?.play();
+          // Auto-play if match is LIVE or if access is granted (2 minutes before)
+          if (match?.status === 'LIVE' || accessGranted) {
+            videoRef.current?.play().catch((err) => {
+              console.log('Auto-play prevented:', err);
+              // Browser may block auto-play, user will need to click play
+            });
+          }
         });
 
         hlsInstance.on(Hls.Events.ERROR, (event, data) => {
@@ -116,7 +122,12 @@ const WatchMatch = () => {
       } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
         // Native HLS support (Safari)
         videoRef.current.src = selectedLink.url;
-        videoRef.current.play();
+        // Auto-play if match is LIVE or if access is granted (2 minutes before)
+        if (match?.status === 'LIVE' || accessGranted) {
+          videoRef.current.play().catch((err) => {
+            console.log('Auto-play prevented:', err);
+          });
+        }
       }
     } else if (selectedLink.type === 'IFRAME') {
       // Handle iframe type
@@ -125,7 +136,12 @@ const WatchMatch = () => {
     } else {
       // Direct video
       videoRef.current.src = selectedLink.url;
-      videoRef.current.play();
+      // Auto-play if match is LIVE or if access is granted (2 minutes before)
+      if (match?.status === 'LIVE' || accessGranted) {
+        videoRef.current.play().catch((err) => {
+          console.log('Auto-play prevented:', err);
+        });
+      }
     }
   };
 
