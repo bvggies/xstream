@@ -1,0 +1,26 @@
+{
+  "name": "xstream",
+  "version": "1.0.0",
+  "description": "Live Football Streaming Platform",
+  "private": true,
+  "scripts": {
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm start",
+    "build:frontend": "cd frontend && npm run build",
+    "prisma:generate": "cd backend && npm run prisma:generate",
+    "prisma:migrate": "cd backend && npm run prisma:migrate",
+    "seed": "cd backend && npm run seed"
+  },
+  "keywords": [
+    "streaming",
+    "football",
+    "sports",
+    "live",
+    "react",
+    "nodejs"
+  ],
+  "author": "",
+  "license": "UNLICENSED"
+}
+

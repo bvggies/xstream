@@ -1,0 +1,184 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  username      String    @unique
+  password      String
+  firstName     String?   @map("first_name")
+  lastName      String?   @map("last_name")
+  avatar        String?
+  banner        String?
+  role          Role      @default(USER)
+  isVerified    Boolean   @default(false) @map("is_verified")
+  isBanned      Boolean   @default(false) @map("is_banned")
+  resetToken    String?   @map("reset_token")
+  resetExpires  DateTime? @map("reset_expires")
+  verifyToken   String?   @map("verify_token")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  favoriteLeagues String[] @default([]) @map("favorite_leagues")
+  watchHistory    WatchHistory[]
+  notifications   Notification[]
+  chatMessages    ChatMessage[]
+  reports         Report[]
+
+  @@map("users")
+}
+
+model Match {
+  id            String   @id @default(uuid())
+  title         String
+  homeTeam      String   @map("home_team")
+  awayTeam      String   @map("away_team")
+  league        String
+  thumbnail     String?
+  status        MatchStatus @default(UPCOMING)
+  matchDate     DateTime @map("match_date")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  streamingLinks StreamingLink[]
+  watchHistory   WatchHistory[]
+  reports        Report[]
+
+  @@map("matches")
+}
+
+model StreamingLink {
+  id          String   @id @default(uuid())
+  matchId     String   @map("match_id")
+  url         String
+  type        LinkType @default(HLS)
+  quality     String?  @default("HD")
+  isActive    Boolean  @default(true) @map("is_active")
+  views       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@map("streaming_links")
+}
+
+model WatchHistory {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  matchId   String   @map("match_id")
+  watchedAt DateTime @default(now()) @map("watched_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchId])
+  @@map("watch_history")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  message   String
+  isAdmin   Boolean  @default(false) @map("is_admin")
+  isSeen    Boolean  @default(false) @map("is_seen")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+model Report {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  matchId   String   @map("match_id")
+  reason    String
+  status    ReportStatus @default(PENDING)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@map("reports")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  adminId   String   @map("admin_id")
+  action    String
+  resource  String
+  details   String?
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}
+
+model Analytics {
+  id        String   @id @default(uuid())
+  date      DateTime @unique @default(now())
+  dailyUsers Int     @default(0) @map("daily_users")
+  pageViews Int      @default(0) @map("page_views")
+  matchViews Int     @default(0) @map("match_views")
+
+  @@map("analytics")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum MatchStatus {
+  UPCOMING
+  LIVE
+  FINISHED
+  CANCELLED
+}
+
+enum LinkType {
+  HLS
+  M3U8
+  IFRAME
+  DIRECT
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  SUCCESS
+  ERROR
+  MATCH_REMINDER
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  REJECTED
+}
+
