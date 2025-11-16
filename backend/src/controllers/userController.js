@@ -1,7 +1,5 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../utils/prisma');
-const path = require('path');
-const fs = require('fs').promises;
 
 const updateProfile = async (req, res, next) => {
   try {
@@ -24,10 +22,23 @@ const updateProfile = async (req, res, next) => {
       updateData.username = username;
     }
 
+    // Handle file upload (only in non-serverless environments)
     if (req.file) {
-      // Handle avatar upload
-      const avatarPath = `/uploads/avatars/${req.file.filename}`;
-      updateData.avatar = avatarPath;
+      // In serverless, file is in memory (req.file.buffer)
+      // For now, we'll skip file upload in serverless
+      // TODO: Integrate with Vercel Blob or Cloudinary for production
+      if (process.env.VERCEL) {
+        // In Vercel/serverless, you need to upload to external storage
+        // For now, return error or skip
+        console.warn('File upload not supported in serverless environment. Use external storage.');
+        return res.status(400).json({ 
+          error: 'File upload not available. Please use external storage integration.' 
+        });
+      } else {
+        // Local development - save file
+        const avatarPath = `/uploads/avatars/${req.file.filename}`;
+        updateData.avatar = avatarPath;
+      }
     }
 
     const user = await prisma.user.update({
@@ -210,4 +221,3 @@ module.exports = {
   markNotificationRead,
   reportBrokenLink,
 };
-

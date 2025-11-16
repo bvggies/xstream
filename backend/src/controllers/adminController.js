@@ -185,8 +185,15 @@ const createMatch = async (req, res, next) => {
       status,
     };
 
+    // Handle file upload (only in non-serverless environments)
     if (req.file) {
-      matchData.thumbnail = `/uploads/thumbnails/${req.file.filename}`;
+      if (process.env.VERCEL) {
+        // In Vercel/serverless, skip file upload for now
+        // TODO: Integrate with Vercel Blob or Cloudinary
+        console.warn('File upload not supported in serverless. Thumbnail skipped.');
+      } else {
+        matchData.thumbnail = `/uploads/thumbnails/${req.file.filename}`;
+      }
     }
 
     const match = await prisma.match.create({
@@ -214,8 +221,14 @@ const updateMatch = async (req, res, next) => {
     if (matchDate) updateData.matchDate = new Date(matchDate);
     if (status) updateData.status = status;
 
+    // Handle file upload (only in non-serverless environments)
     if (req.file) {
-      updateData.thumbnail = `/uploads/thumbnails/${req.file.filename}`;
+      if (process.env.VERCEL) {
+        // In Vercel/serverless, skip file upload for now
+        console.warn('File upload not supported in serverless. Thumbnail skipped.');
+      } else {
+        updateData.thumbnail = `/uploads/thumbnails/${req.file.filename}`;
+      }
     }
 
     const match = await prisma.match.update({
