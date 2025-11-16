@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import axiosInstance from '../utils/axios';
 import { format } from 'date-fns';
+import { Link } from 'react-router-dom';
 import { FiPlay, FiClock, FiUsers } from 'react-icons/fi';
 
 const Home = () => {
@@ -11,6 +12,7 @@ const Home = () => {
 
   useEffect(() => {
     fetchMatches();
+    fetchFeaturedHighlights();
     const interval = setInterval(fetchMatches, 5 * 60 * 1000); // Refresh every 5 minutes
     return () => clearInterval(interval);
   }, []);
@@ -23,6 +25,18 @@ const Home = () => {
       console.error('Failed to fetch matches:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFeaturedHighlights = async () => {
+    try {
+      const response = await axiosInstance.get('/highlights?sort=mostViewed');
+      const topHighlights = (response.data.highlights || []).slice(0, 3);
+      setHighlights(topHighlights);
+    } catch (error) {
+      console.error('Failed to fetch highlights:', error);
+    } finally {
+      setHighlightsLoading(false);
     }
   };
 

@@ -299,24 +299,119 @@ const WatchHighlight = () => {
             </motion.div>
           </div>
 
-          {/* Sidebar - Related Highlights */}
-          <div className="lg:col-span-1">
+          {/* Sidebar */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Match Info Card */}
+            {highlight.match && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="card"
+              >
+                <h3 className="text-lg font-bold text-white mb-4">Match Information</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-dark-800 rounded-lg">
+                    <span className="text-dark-400 text-sm">Home Team</span>
+                    <span className="text-white font-semibold">{highlight.match.homeTeam}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-dark-800 rounded-lg">
+                    <span className="text-dark-400 text-sm">Away Team</span>
+                    <span className="text-white font-semibold">{highlight.match.awayTeam}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-dark-800 rounded-lg">
+                    <span className="text-dark-400 text-sm">League</span>
+                    <span className="text-primary-400 font-semibold">{highlight.match.league}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-dark-800 rounded-lg">
+                    <span className="text-dark-400 text-sm">Date</span>
+                    <span className="text-white text-sm">
+                      {format(new Date(highlight.match.matchDate), 'MMM dd, yyyy')}
+                    </span>
+                  </div>
+                  <Link
+                    to={`/watch/${highlight.match.id}`}
+                    className="block w-full btn-primary text-center mt-4"
+                  >
+                    Watch Full Match
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Related Highlights */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
+              transition={{ delay: 0.3 }}
               className="card"
             >
               <h2 className="text-xl font-bold text-white mb-4">Related Highlights</h2>
               {relatedHighlights.length > 0 ? (
                 <div className="space-y-4">
                   {relatedHighlights.map((related, index) => (
-                    <HighlightCard key={related.id} highlight={related} index={index} />
+                    <Link
+                      key={related.id}
+                      to={`/highlights/${related.id}`}
+                      className="block hover:opacity-80 transition-opacity"
+                    >
+                      <div className="flex space-x-3">
+                        <img
+                          src={related.thumbnailUrl}
+                          alt={related.title}
+                          className="w-24 h-16 object-cover rounded-lg"
+                          onError={(e) => {
+                            e.target.src = 'https://via.placeholder.com/150?text=No+Image';
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-white font-semibold text-sm line-clamp-2 mb-1">
+                            {related.title}
+                          </h4>
+                          <div className="flex items-center space-x-3 text-xs text-dark-400">
+                            <span>{related.views.toLocaleString()} views</span>
+                            {related.duration && (
+                              <span>{Math.floor(related.duration / 60)}:{(related.duration % 60).toString().padStart(2, '0')}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
                   ))}
                 </div>
               ) : (
                 <p className="text-dark-400 text-sm">No related highlights</p>
               )}
+            </motion.div>
+
+            {/* Quick Stats */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="card"
+            >
+              <h3 className="text-lg font-bold text-white mb-4">Quick Stats</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-dark-400">Views</span>
+                  <span className="text-white font-bold">{highlight.views.toLocaleString()}</span>
+                </div>
+                {highlight.duration && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-dark-400">Duration</span>
+                    <span className="text-white font-bold">
+                      {Math.floor(highlight.duration / 60)}:{(highlight.duration % 60).toString().padStart(2, '0')}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-dark-400">Uploaded</span>
+                  <span className="text-white font-bold">
+                    {format(new Date(highlight.createdAt), 'MMM dd, yyyy')}
+                  </span>
+                </div>
+              </div>
             </motion.div>
           </div>
         </div>
