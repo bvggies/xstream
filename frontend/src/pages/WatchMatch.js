@@ -541,6 +541,7 @@ const WatchMatch = () => {
       setPlayerType('video');
       setEmbedUrl(null);
       videoRef.current.src = url;
+      videoRef.current.load(); // Force reload with new source
       // Auto-play if match is LIVE or if access is granted (2 minutes before)
       if (match?.status === 'LIVE' || accessGranted) {
         videoRef.current.play().catch((err) => {
