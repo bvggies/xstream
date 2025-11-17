@@ -94,8 +94,18 @@ const WatchMatch = () => {
       return 'vimeo';
     }
     
-    // Check for IPTV/HLS streams
-    if (type === 'HLS' || type === 'M3U8' || urlLower.includes('.m3u8') || urlLower.includes('hls')) {
+    // Check for IPTV/HLS/M3U8 streams - enhanced detection
+    if (
+      type === 'HLS' || 
+      type === 'M3U8' || 
+      urlLower.includes('.m3u8') || 
+      urlLower.includes('.m3u') ||
+      urlLower.includes('hls') ||
+      urlLower.includes('application/x-mpegurl') ||
+      urlLower.includes('application/vnd.apple.mpegurl') ||
+      urlLower.match(/\.m3u8(\?|$|#)/i) ||
+      urlLower.match(/\.m3u(\?|$|#)/i)
+    ) {
       return 'hls';
     }
     
@@ -175,19 +185,39 @@ const WatchMatch = () => {
       setEmbedUrl(null);
       
       if (Hls.isSupported()) {
+        // Enhanced HLS configuration for live streams
         const hlsInstance = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
+          liveSyncDurationCount: 3, // Reduce latency for live streams
+          liveMaxLatencyDurationCount: 5,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+          maxBufferSize: 60 * 1000 * 1000, // 60MB
+          maxBufferHole: 0.5,
+          highBufferWatchdogPeriod: 2,
+          nudgeOffset: 0.1,
+          nudgeMaxRetry: 3,
+          maxFragLoadingTimeOut: 20,
+          fragLoadingTimeOut: 20,
+          manifestLoadingTimeOut: 10,
           xhrSetup: (xhr, url) => {
             // Allow CORS for IPTV links
             xhr.withCredentials = false;
+            // Add headers if needed for authentication
+            // xhr.setRequestHeader('Authorization', 'Bearer token');
           },
+          // Enable better error recovery
+          debug: false,
+          capLevelToPlayerSize: true,
+          startLevel: -1, // Auto-select best quality
         });
 
         hlsInstance.loadSource(url);
         hlsInstance.attachMedia(videoRef.current);
 
         hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+          console.log('HLS manifest parsed successfully');
           // Auto-play if match is LIVE or if access is granted (2 minutes before)
           if (match?.status === 'LIVE' || accessGranted) {
             videoRef.current?.play().catch((err) => {
@@ -196,34 +226,60 @@ const WatchMatch = () => {
           }
         });
 
+        hlsInstance.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+          console.log('HLS quality switched to level:', data.level);
+        });
+
         hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+          console.error('HLS Error:', data);
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
+                console.log('Network error, attempting to recover...');
                 toast.error('Network error. Trying to recover...');
-                hlsInstance.startLoad();
+                try {
+                  hlsInstance.startLoad();
+                } catch (e) {
+                  console.error('Recovery failed:', e);
+                  tryNextLink();
+                }
                 break;
               case Hls.ErrorTypes.MEDIA_ERROR:
+                console.log('Media error, attempting to recover...');
                 toast.error('Media error. Trying to recover...');
-                hlsInstance.recoverMediaError();
+                try {
+                  hlsInstance.recoverMediaError();
+                } catch (e) {
+                  console.error('Recovery failed:', e);
+                  tryNextLink();
+                }
                 break;
               default:
+                console.error('Fatal error, destroying HLS instance');
                 hlsInstance.destroy();
                 tryNextLink();
                 break;
             }
+          } else {
+            // Non-fatal errors, log but continue
+            console.warn('Non-fatal HLS error:', data);
           }
         });
 
         setHls(hlsInstance);
       } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
-        // Native HLS support (Safari)
+        // Native HLS support (Safari/iOS)
+        console.log('Using native HLS support');
         videoRef.current.src = url;
-        if (match?.status === 'LIVE' || accessGranted) {
-          videoRef.current.play().catch((err) => {
-            console.log('Auto-play prevented:', err);
-          });
-        }
+        videoRef.current.addEventListener('loadedmetadata', () => {
+          if (match?.status === 'LIVE' || accessGranted) {
+            videoRef.current.play().catch((err) => {
+              console.log('Auto-play prevented:', err);
+            });
+          }
+        });
+      } else {
+        toast.error('HLS playback not supported in this browser. Please use Chrome, Firefox, or Safari.');
       }
       return;
     }
@@ -428,6 +484,12 @@ const WatchMatch = () => {
                           className="w-full h-full"
                           playsInline
                           crossOrigin="anonymous"
+                          preload="metadata"
+                          onError={(e) => {
+                            console.error('Video error:', e);
+                            toast.error('Video playback error. Trying next stream...');
+                            tryNextLink();
+                          }}
                         />
                       )}
                     </>
