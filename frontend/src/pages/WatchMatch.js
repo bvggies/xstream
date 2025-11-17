@@ -498,6 +498,7 @@ const WatchMatch = () => {
         console.log('Using native HLS support');
         videoRef.current.crossOrigin = 'anonymous';
         videoRef.current.src = url;
+        videoRef.current.load(); // Force reload with new source
         
         videoRef.current.addEventListener('error', (e) => {
           console.error('Native HLS video error:', e);
