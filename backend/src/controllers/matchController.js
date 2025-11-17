@@ -33,8 +33,7 @@ const getMatches = async (req, res, next) => {
     }
 
     // Handle date filtering for specific statuses
-    const statusArray = status ? (status.includes(',') ? status.split(',').map(s => s.trim()) : [status.trim()]) : [];
-    
+    // Reuse the statusArray from above for date filtering logic
     if (statusArray.length === 1 && statusArray[0] === 'UPCOMING') {
       // For UPCOMING status, only show future matches
       where.matchDate = { gte: new Date() };
