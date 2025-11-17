@@ -202,10 +202,6 @@ const WatchHighlight = () => {
                   <span className="text-primary-400 font-semibold">{highlight.league}</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <FiEye />
-                  <span>{highlight.views.toLocaleString()} views</span>
-                </div>
-                <div className="flex items-center space-x-2">
                   <FiCalendar />
                   <span>{format(new Date(highlight.createdAt), 'MMM dd, yyyy')}</span>
                 </div>
@@ -372,15 +368,14 @@ const WatchHighlight = () => {
                           }}
                         />
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-white font-semibold text-sm line-clamp-2 mb-1">
-                            {related.title}
-                          </h4>
-                          <div className="flex items-center space-x-3 text-xs text-dark-400">
-                            <span>{related.views.toLocaleString()} views</span>
-                            {related.duration && (
-                              <span>{Math.floor(related.duration / 60)}:{(related.duration % 60).toString().padStart(2, '0')}</span>
-                            )}
-                          </div>
+                              <h4 className="text-white font-semibold text-sm line-clamp-2 mb-1">
+                                {related.title}
+                              </h4>
+                              <div className="flex items-center space-x-3 text-xs text-dark-400">
+                                {related.duration && (
+                                  <span>{Math.floor(related.duration / 60)}:{(related.duration % 60).toString().padStart(2, '0')}</span>
+                                )}
+                              </div>
                         </div>
                       </div>
                     </Link>
@@ -400,10 +395,6 @@ const WatchHighlight = () => {
             >
               <h3 className="text-lg font-bold text-white mb-4">Quick Stats</h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-dark-400">Views</span>
-                  <span className="text-white font-bold">{highlight.views.toLocaleString()}</span>
-                </div>
                 {highlight.duration && (
                   <div className="flex items-center justify-between">
                     <span className="text-dark-400">Duration</span>

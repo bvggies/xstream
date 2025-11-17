@@ -51,10 +51,6 @@ const HighlightCard = ({ highlight, index }) => {
                 </span>
               ) : null}
             </div>
-            <div className="flex items-center space-x-1 bg-dark-900/70 px-2 py-1 rounded">
-              <FiEye className="w-3 h-3" />
-              <span>{highlight.views.toLocaleString()}</span>
-            </div>
           </div>
         </div>
 
