@@ -9,6 +9,13 @@ import MatchChat from '../components/MatchChat';
 import { calculateTimeRemaining, formatCountdown, canAccessMatch } from '../utils/countdown';
 import { format } from 'date-fns';
 
+// Helper function to get proxy URL for M3U8 streams
+const getProxyUrl = (originalUrl) => {
+  // Use axiosInstance baseURL to ensure consistency
+  const API_URL = axiosInstance.defaults.baseURL || process.env.REACT_APP_API_URL || 'https://xstream-backend.vercel.app/api';
+  return `${API_URL}/matches/proxy-m3u8?url=${encodeURIComponent(originalUrl)}`;
+};
+
 const WatchMatch = () => {
   const { id } = useParams();
   const videoRef = useRef(null);
@@ -231,8 +238,23 @@ const WatchMatch = () => {
 
         let retryCount = 0;
         const maxRetries = 3;
+        let useProxy = false; // Track if we're using proxy
 
-        hlsInstance.loadSource(url);
+        // Function to load source (direct or proxied)
+        const loadHlsSource = (sourceUrl, isProxy = false) => {
+          if (isProxy) {
+            useProxy = true;
+            const proxyUrl = getProxyUrl(sourceUrl);
+            console.log('Loading M3U8 via proxy:', proxyUrl);
+            hlsInstance.loadSource(proxyUrl);
+          } else {
+            console.log('Loading M3U8 directly:', sourceUrl);
+            hlsInstance.loadSource(sourceUrl);
+          }
+        };
+
+        // Try direct access first
+        loadHlsSource(url, false);
         hlsInstance.attachMedia(videoRef.current);
 
         hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -284,14 +306,97 @@ const WatchMatch = () => {
 
                 if (retryCount < maxRetries) {
                   retryCount++;
+                  
+                  // If this is the first retry and we haven't tried proxy yet, try proxy
+                  if (retryCount === 1 && !useProxy && (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR || 
+                      data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT)) {
+                    console.log('Manifest load failed, trying proxy...');
+                    toast.info('CORS detected. Trying proxy...', { duration: 2000 });
+                    try {
+                      hlsInstance.destroy();
+                      // Create new HLS instance with same config but using proxy
+                      const newHlsInstance = new Hls({
+                        enableWorker: true,
+                        lowLatencyMode: true,
+                        liveSyncDurationCount: 3,
+                        liveMaxLatencyDurationCount: 5,
+                        maxBufferLength: 30,
+                        maxMaxBufferLength: 60,
+                        maxBufferSize: 60 * 1000 * 1000,
+                        maxBufferHole: 0.5,
+                        highBufferWatchdogPeriod: 2,
+                        nudgeOffset: 0.1,
+                        nudgeMaxRetry: 5,
+                        maxFragLoadingTimeOut: 60,
+                        fragLoadingTimeOut: 60,
+                        manifestLoadingTimeOut: 30,
+                        levelLoadingTimeOut: 60,
+                        manifestLoadingMaxRetry: 5,
+                        manifestLoadingRetryDelay: 1000,
+                        levelLoadingMaxRetry: 5,
+                        fragLoadingMaxRetry: 5,
+                        fragLoadingRetryDelay: 1000,
+                        xhrSetup: (xhr, url) => {
+                          xhr.withCredentials = false;
+                          if (xhr.setRequestHeader) {
+                            xhr.setRequestHeader('Accept', '*/*');
+                            xhr.setRequestHeader('Accept-Language', '*');
+                          }
+                        },
+                        debug: false,
+                        capLevelToPlayerSize: true,
+                        startLevel: -1,
+                        abrEwmaDefaultEstimate: 500000,
+                        abrBandWidthFactor: 0.95,
+                        abrBandWidthUpFactor: 0.7,
+                        maxStarvationDelay: 4,
+                        maxLoadingDelay: 4,
+                      });
+                      newHlsInstance.attachMedia(videoRef.current);
+                      
+                      // Set up event handlers for new instance
+                      newHlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+                        console.log('HLS manifest parsed successfully via proxy');
+                        retryCount = 0;
+                        if (match?.status === 'LIVE' || accessGranted) {
+                          videoRef.current?.play().catch((err) => {
+                            console.log('Auto-play prevented:', err);
+                          });
+                        }
+                      });
+
+                      newHlsInstance.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+                        console.log('HLS quality switched to level:', data.level);
+                      });
+
+                      newHlsInstance.on(Hls.Events.FRAG_LOADED, () => {
+                        retryCount = 0;
+                      });
+
+                      newHlsInstance.on(Hls.Events.ERROR, (event, data) => {
+                        console.error('HLS Error (proxy):', data);
+                        if (data.fatal) {
+                          toast.error('Stream failed even with proxy. Trying next stream...', { duration: 4000 });
+                          setTimeout(() => tryNextLink(), 2000);
+                        }
+                      });
+
+                      loadHlsSource(url, true); // Use proxy
+                      setHls(newHlsInstance);
+                      return; // Exit early, let the new instance handle events
+                    } catch (e) {
+                      console.error('Failed to create proxy HLS instance:', e);
+                    }
+                  }
+                  
                   toast.error(`${errorMessage} (Retry ${retryCount}/${maxRetries})`, { duration: 3000 });
                   
                   try {
                     // Try to recover by restarting the load
                     if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR || 
                         data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT) {
-                      // For manifest errors, reload the source
-                      hlsInstance.loadSource(url);
+                      // For manifest errors, reload the source (use proxy if we're already using it)
+                      loadHlsSource(url, useProxy);
                     } else {
                       // For fragment errors, try to start loading again
                       hlsInstance.startLoad();

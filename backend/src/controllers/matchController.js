@@ -1,4 +1,7 @@
 const prisma = require('../utils/prisma');
+const https = require('https');
+const http = require('http');
+const { URL } = require('url');
 
 const getMatches = async (req, res, next) => {
   try {
@@ -181,9 +184,116 @@ const watchMatch = async (req, res, next) => {
   }
 };
 
+// Proxy M3U8 manifest to bypass CORS
+const proxyM3U8 = async (req, res, next) => {
+  try {
+    const { url: streamUrl } = req.query;
+
+    if (!streamUrl) {
+      return res.status(400).json({ error: 'Stream URL is required' });
+    }
+
+    // Validate URL
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(streamUrl);
+    } catch (error) {
+      return res.status(400).json({ error: 'Invalid URL format' });
+    }
+
+    // Only allow http/https protocols
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      return res.status(400).json({ error: 'Only HTTP/HTTPS URLs are allowed' });
+    }
+
+    const client = parsedUrl.protocol === 'https:' ? https : http;
+
+    const options = {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': '*/*',
+        'Accept-Language': '*',
+      },
+      timeout: 30000, // 30 second timeout
+    };
+
+    const proxyReq = client.get(streamUrl, options, (proxyRes) => {
+      // Set CORS headers
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.setHeader('Content-Type', proxyRes.headers['content-type'] || 'application/vnd.apple.mpegurl');
+
+      // Handle redirects
+      if (proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location) {
+        return res.redirect(proxyRes.statusCode, `/api/matches/proxy-m3u8?url=${encodeURIComponent(proxyRes.headers.location)}`);
+      }
+
+      res.status(proxyRes.statusCode);
+
+      let data = '';
+      proxyRes.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      proxyRes.on('end', () => {
+        // Rewrite relative URLs in M3U8 manifest to absolute URLs
+        if (data.includes('#EXT') || data.includes('.m3u8') || data.includes('.ts')) {
+          const baseUrl = `${parsedUrl.protocol}//${parsedUrl.host}${parsedUrl.pathname.substring(0, parsedUrl.pathname.lastIndexOf('/') + 1)}`;
+          const lines = data.split('\n');
+          const rewrittenLines = lines.map((line) => {
+            // Skip comments and empty lines
+            if (line.trim().startsWith('#') || !line.trim()) {
+              return line;
+            }
+            // If line is a URL and it's relative, make it absolute
+            if (line.trim() && !line.trim().startsWith('http://') && !line.trim().startsWith('https://')) {
+              try {
+                const absoluteUrl = new URL(line.trim(), baseUrl);
+                return absoluteUrl.href;
+              } catch (e) {
+                // If URL construction fails, try simple concatenation
+                return baseUrl + line.trim();
+              }
+            }
+            return line;
+          });
+          data = rewrittenLines.join('\n');
+        }
+
+        res.send(data);
+      });
+    });
+
+    // Set timeout
+    proxyReq.setTimeout(30000, () => {
+      proxyReq.destroy();
+      if (!res.headersSent) {
+        res.status(504).json({ error: 'Request timeout' });
+      }
+    });
+
+    proxyReq.on('error', (error) => {
+      console.error('Proxy error:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ 
+          error: 'Failed to fetch stream',
+          message: error.message 
+        });
+      }
+    });
+
+  } catch (error) {
+    console.error('Proxy M3U8 error:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   getMatches,
   getMatchById,
   watchMatch,
+  proxyM3U8,
 };
 
