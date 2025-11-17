@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import axiosInstance from '../utils/axios';
 import HighlightPlayer from '../components/HighlightPlayer';
 import HighlightCard from '../components/HighlightCard';
-import { FiArrowLeft, FiShare2, FiCopy, FiEye, FiCalendar, FiTag, FiTrendingUp, FiBarChart2, FiDownload, FiBookmark, FiCheck } from 'react-icons/fi';
+import { FiArrowLeft, FiShare2, FiCopy, FiCalendar, FiTag, FiTrendingUp, FiBarChart2, FiDownload, FiBookmark, FiCheck } from 'react-icons/fi';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import SkeletonLoader from '../components/SkeletonLoader';

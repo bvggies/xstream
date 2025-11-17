@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiPlay, FiEye, FiClock } from 'react-icons/fi';
+import { FiPlay, FiClock } from 'react-icons/fi';
 import { format } from 'date-fns';
 
 const HighlightCard = ({ highlight, index }) => {
