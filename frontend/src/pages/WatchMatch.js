@@ -193,52 +193,55 @@ const WatchMatch = () => {
       
       if (Hls.isSupported()) {
         // Enhanced HLS configuration for live streams and IPTV
-        const hlsInstance = new Hls({
-          enableWorker: true,
-          lowLatencyMode: true,
-          liveSyncDurationCount: 3, // Reduce latency for live streams
-          liveMaxLatencyDurationCount: 5,
-          maxBufferLength: 30,
-          maxMaxBufferLength: 60,
-          maxBufferSize: 60 * 1000 * 1000, // 60MB
-          maxBufferHole: 0.5,
-          highBufferWatchdogPeriod: 2,
-          nudgeOffset: 0.1,
-          nudgeMaxRetry: 5, // Increased retry attempts
-          maxFragLoadingTimeOut: 60, // Increased timeout for IPTV streams
-          fragLoadingTimeOut: 60, // Increased timeout for IPTV streams
-          manifestLoadingTimeOut: 30, // Increased timeout for manifest loading
-          levelLoadingTimeOut: 60, // Timeout for level loading
-          manifestLoadingMaxRetry: 5, // Retry manifest loading
-          manifestLoadingRetryDelay: 1000, // Delay between retries
-          levelLoadingMaxRetry: 5, // Retry level loading
-          fragLoadingMaxRetry: 5, // Retry fragment loading
-          fragLoadingRetryDelay: 1000, // Delay between fragment retries
-          xhrSetup: (xhr, url) => {
-            // Enhanced CORS handling for IPTV links
-            xhr.withCredentials = false;
-            // Set CORS mode
-            if (xhr.setRequestHeader) {
-              // Some IPTV providers require specific headers
-              xhr.setRequestHeader('Accept', '*/*');
-              xhr.setRequestHeader('Accept-Language', '*');
-            }
-          },
-          // Enable better error recovery
-          debug: false,
-          capLevelToPlayerSize: true,
-          startLevel: -1, // Auto-select best quality
-          // Additional IPTV-friendly settings
-          abrEwmaDefaultEstimate: 500000, // Default bitrate estimate
-          abrBandWidthFactor: 0.95,
-          abrBandWidthUpFactor: 0.7,
-          maxStarvationDelay: 4,
-          maxLoadingDelay: 4,
-        });
+        const createHlsInstance = (useProxyUrl = false) => {
+          return new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            liveSyncDurationCount: 3, // Reduce latency for live streams
+            liveMaxLatencyDurationCount: 5,
+            maxBufferLength: 30,
+            maxMaxBufferLength: 60,
+            maxBufferSize: 60 * 1000 * 1000, // 60MB
+            maxBufferHole: 0.5,
+            highBufferWatchdogPeriod: 2,
+            nudgeOffset: 0.1,
+            nudgeMaxRetry: 5, // Increased retry attempts
+            maxFragLoadingTimeOut: 60, // Increased timeout for IPTV streams
+            fragLoadingTimeOut: 60, // Increased timeout for IPTV streams
+            manifestLoadingTimeOut: 30, // Increased timeout for manifest loading
+            levelLoadingTimeOut: 60, // Timeout for level loading
+            manifestLoadingMaxRetry: 5, // Retry manifest loading
+            manifestLoadingRetryDelay: 1000, // Delay between retries
+            levelLoadingMaxRetry: 5, // Retry level loading
+            fragLoadingMaxRetry: 5, // Retry fragment loading
+            fragLoadingRetryDelay: 1000, // Delay between fragment retries
+            xhrSetup: (xhr, requestUrl) => {
+              // Enhanced CORS handling for IPTV links
+              xhr.withCredentials = false;
+              // Set CORS mode
+              if (xhr.setRequestHeader) {
+                // Some IPTV providers require specific headers
+                xhr.setRequestHeader('Accept', '*/*');
+                xhr.setRequestHeader('Accept-Language', '*');
+              }
+            },
+            // Enable better error recovery
+            debug: false,
+            capLevelToPlayerSize: true,
+            startLevel: -1, // Auto-select best quality
+            // Additional IPTV-friendly settings
+            abrEwmaDefaultEstimate: 500000, // Default bitrate estimate
+            abrBandWidthFactor: 0.95,
+            abrBandWidthUpFactor: 0.7,
+            maxStarvationDelay: 4,
+            maxLoadingDelay: 4,
+          });
+        };
 
         let retryCount = 0;
         const maxRetries = 3;
         let useProxy = false; // Track if we're using proxy
+        let hlsInstance = createHlsInstance();
 
         // Function to load source (direct or proxied)
         const loadHlsSource = (sourceUrl, isProxy = false) => {
@@ -253,8 +256,17 @@ const WatchMatch = () => {
           }
         };
 
-        // Try direct access first
-        loadHlsSource(url, false);
+        // For M3U8 links, try proxy first to avoid CORS issues
+        // If proxy fails, we'll fall back to direct
+        const tryLoadWithProxy = () => {
+          console.log('Trying M3U8 stream with proxy first...');
+          useProxy = true;
+          const proxyUrl = getProxyUrl(url);
+          hlsInstance.loadSource(proxyUrl);
+        };
+
+        // Try proxy first for M3U8 streams
+        tryLoadWithProxy();
         hlsInstance.attachMedia(videoRef.current);
 
         hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -283,6 +295,8 @@ const WatchMatch = () => {
             fatal: data.fatal,
             url: data.url || url,
             error: data.error,
+            response: data.response,
+            networkDetails: data.networkDetails,
           });
 
           if (data.fatal) {
@@ -446,8 +460,53 @@ const WatchMatch = () => {
                 break;
 
               default:
-                console.error('Fatal error, destroying HLS instance');
-                toast.error('Stream error. Trying next stream...', { duration: 4000 });
+                console.error('Fatal error, destroying HLS instance:', {
+                  type: data.type,
+                  details: data.details,
+                  error: data.error,
+                  url: data.url || url,
+                });
+                
+                // If proxy failed and we haven't tried direct yet, try direct
+                if (useProxy && (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR || 
+                    data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT ||
+                    data.details === Hls.ErrorDetails.MANIFEST_PARSING_ERROR)) {
+                  console.log('Proxy failed, trying direct access...');
+                  toast.info('Proxy failed. Trying direct access...', { duration: 2000 });
+                  try {
+                    hlsInstance.destroy();
+                    useProxy = false;
+                    const newHlsInstance = createHlsInstance();
+                    newHlsInstance.attachMedia(videoRef.current);
+                    
+                    newHlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+                      console.log('HLS manifest parsed successfully via direct access');
+                      retryCount = 0;
+                      if (match?.status === 'LIVE' || accessGranted) {
+                        videoRef.current?.play().catch((err) => {
+                          console.log('Auto-play prevented:', err);
+                        });
+                      }
+                    });
+
+                    newHlsInstance.on(Hls.Events.ERROR, (event, data) => {
+                      console.error('HLS Error (direct):', data);
+                      if (data.fatal) {
+                        toast.error(`Stream error: ${data.details || data.type}. Trying next stream...`, { duration: 4000 });
+                        setTimeout(() => tryNextLink(), 2000);
+                      }
+                    });
+
+                    loadHlsSource(url, false); // Try direct
+                    setHls(newHlsInstance);
+                    return;
+                  } catch (e) {
+                    console.error('Failed to create direct HLS instance:', e);
+                  }
+                }
+                
+                const errorDetails = data.details || data.type || 'Unknown error';
+                toast.error(`Stream error: ${errorDetails}. Trying next stream...`, { duration: 4000 });
                 hlsInstance.destroy();
                 setTimeout(() => tryNextLink(), 2000);
                 break;
