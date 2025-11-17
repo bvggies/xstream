@@ -8,10 +8,13 @@ const getMatches = async (req, res, next) => {
     const { status, league } = req.query;
     const where = {};
 
+    // Parse status array (handle comma-separated or single values)
+    let statusArray = [];
     if (status) {
-      // Handle comma-separated status values (e.g., "LIVE,UPCOMING")
-      const statusArray = status.includes(',') ? status.split(',').map(s => s.trim()) : [status.trim()];
-      
+      statusArray = status.includes(',') ? status.split(',').map(s => s.trim()) : [status.trim()];
+    }
+
+    if (status) {
       if (statusArray.length === 1) {
         // Single status value
         if (statusArray[0] === 'FINISHED') {
@@ -33,7 +36,6 @@ const getMatches = async (req, res, next) => {
     }
 
     // Handle date filtering for specific statuses
-    // Reuse the statusArray from above for date filtering logic
     if (statusArray.length === 1 && statusArray[0] === 'UPCOMING') {
       // For UPCOMING status, only show future matches
       where.matchDate = { gte: new Date() };
@@ -48,21 +50,10 @@ const getMatches = async (req, res, next) => {
         },
       ];
       delete where.status;
-    } else if (!status && where.status && where.status.in) {
-      // Default: show LIVE matches (regardless of date) and UPCOMING matches (future dates)
-      // Also include UPCOMING matches that have started (matchDate <= now) - treat as LIVE
-      where.OR = [
-        { status: 'LIVE' },
-        {
-          status: 'UPCOMING',
-          matchDate: { gte: new Date() },
-        },
-        {
-          status: 'UPCOMING',
-          matchDate: { lte: new Date() },
-        },
-      ];
-      delete where.status;
+    } else if (!status) {
+      // Default (no status filter): show all LIVE and UPCOMING matches
+      // Don't apply date restrictions - show all matches regardless of date
+      // This allows showing both past UPCOMING matches (that should be LIVE) and future ones
     }
     // LIVE matches stay visible until status is changed to FINISHED
 
