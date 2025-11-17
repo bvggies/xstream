@@ -9,11 +9,19 @@ const getMatches = async (req, res, next) => {
     const where = {};
 
     if (status) {
-      if (status === 'FINISHED') {
-        // Show finished matches
-        where.status = 'FINISHED';
+      // Handle comma-separated status values (e.g., "LIVE,UPCOMING")
+      const statusArray = status.includes(',') ? status.split(',').map(s => s.trim()) : [status.trim()];
+      
+      if (statusArray.length === 1) {
+        // Single status value
+        if (statusArray[0] === 'FINISHED') {
+          where.status = 'FINISHED';
+        } else {
+          where.status = statusArray[0];
+        }
       } else {
-        where.status = status;
+        // Multiple status values - use 'in' operator
+        where.status = { in: statusArray };
       }
     } else {
       // Default: show LIVE and UPCOMING (not FINISHED)
@@ -24,10 +32,13 @@ const getMatches = async (req, res, next) => {
       where.league = league;
     }
 
-    // For UPCOMING status, only show future matches
-    if (status === 'UPCOMING') {
+    // Handle date filtering for specific statuses
+    const statusArray = status ? (status.includes(',') ? status.split(',').map(s => s.trim()) : [status.trim()]) : [];
+    
+    if (statusArray.length === 1 && statusArray[0] === 'UPCOMING') {
+      // For UPCOMING status, only show future matches
       where.matchDate = { gte: new Date() };
-    } else if (status === 'LIVE') {
+    } else if (statusArray.length === 1 && statusArray[0] === 'LIVE') {
       // LIVE matches: show regardless of date (they stay until manually ended)
       // Also include UPCOMING matches that have started (matchDate <= now) - treat as LIVE
       where.OR = [
@@ -38,7 +49,7 @@ const getMatches = async (req, res, next) => {
         },
       ];
       delete where.status;
-    } else if (!status && where.status.in) {
+    } else if (!status && where.status && where.status.in) {
       // Default: show LIVE matches (regardless of date) and UPCOMING matches (future dates)
       // Also include UPCOMING matches that have started (matchDate <= now) - treat as LIVE
       where.OR = [
