@@ -255,7 +255,6 @@ const Home = () => {
                         {highlight.title}
                       </h3>
                       <div className="flex items-center justify-between mt-2 text-xs text-dark-400">
-                        <span>{highlight.views.toLocaleString()} views</span>
                         <span>{format(new Date(highlight.createdAt), 'MMM dd')}</span>
                       </div>
                     </div>
