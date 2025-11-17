@@ -45,7 +45,6 @@ const AdminHighlightTable = ({
               <th className="text-left p-4 text-white font-semibold">Thumbnail</th>
               <th className="text-left p-4 text-white font-semibold">Title</th>
               <th className="text-left p-4 text-white font-semibold">League</th>
-              <th className="text-left p-4 text-white font-semibold">Views</th>
               <th className="text-left p-4 text-white font-semibold">Date</th>
               <th className="text-left p-4 text-white font-semibold">Status</th>
               <th className="text-right p-4 text-white font-semibold">Actions</th>
@@ -88,7 +87,6 @@ const AdminHighlightTable = ({
                     )}
                   </td>
                   <td className="p-4 text-dark-400">{highlight.league}</td>
-                  <td className="p-4 text-dark-400">{highlight.views.toLocaleString()}</td>
                   <td className="p-4 text-dark-400">
                     {format(new Date(highlight.createdAt), 'MMM dd, yyyy')}
                   </td>

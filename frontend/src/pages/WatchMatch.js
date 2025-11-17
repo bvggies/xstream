@@ -540,7 +540,7 @@ const WatchMatch = () => {
                       >
                         {match.streamingLinks.map((link, index) => (
                           <option key={link.id} value={link.id}>
-                            {link.quality || link.type} {link.views > 0 && `(${link.views} views)`} {index === 0 && '⭐'}
+                            {link.quality || link.type} {index === 0 && '⭐'}
                           </option>
                         ))}
                       </select>
@@ -569,7 +569,6 @@ const WatchMatch = () => {
                           }`}
                         >
                           {link.quality || link.type}
-                          {link.views > 0 && <span className="ml-1 opacity-75">({link.views})</span>}
                         </button>
                       ))}
                     </div>
@@ -643,7 +642,6 @@ const WatchMatch = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-white font-semibold">{link.quality || link.type}</p>
-                          <p className="text-dark-400 text-xs">{link.views} views</p>
                         </div>
                         {selectedLink?.id === link.id && (
                           <FiPlay className="text-primary-500" />

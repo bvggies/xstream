@@ -93,7 +93,6 @@ const HighlightFilters = ({ onFilterChange }) => {
           >
             <option value="newest">Newest First</option>
             <option value="oldest">Oldest First</option>
-            <option value="mostViewed">Most Viewed</option>
           </select>
 
           {hasActiveFilters && (

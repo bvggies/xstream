@@ -30,7 +30,7 @@ const Home = () => {
 
   const fetchFeaturedHighlights = async () => {
     try {
-      const response = await axiosInstance.get('/highlights?sort=mostViewed');
+      const response = await axiosInstance.get('/highlights');
       if (response && response.data && Array.isArray(response.data.highlights)) {
         const topHighlights = response.data.highlights.slice(0, 3);
         setHighlights(topHighlights);
