@@ -208,7 +208,7 @@ const WatchMatch = () => {
             nudgeMaxRetry: 5, // Increased retry attempts
             maxFragLoadingTimeOut: 60, // Increased timeout for IPTV streams
             fragLoadingTimeOut: 60, // Increased timeout for IPTV streams
-            manifestLoadingTimeOut: 30, // Increased timeout for manifest loading
+            manifestLoadingTimeOut: 60, // Increased timeout for manifest loading (60s for slow IPTV)
             levelLoadingTimeOut: 60, // Timeout for level loading
             manifestLoadingMaxRetry: 5, // Retry manifest loading
             manifestLoadingRetryDelay: 1000, // Delay between retries
