@@ -269,18 +269,24 @@ const proxyM3U8 = async (req, res, next) => {
 
     // Set timeout
     proxyReq.setTimeout(60000, () => {
+      console.error('Proxy timeout for URL:', streamUrl);
       proxyReq.destroy();
       if (!res.headersSent) {
-        res.status(504).json({ error: 'Request timeout' });
+        res.status(504).json({ 
+          error: 'Request timeout',
+          message: 'The stream server did not respond within 60 seconds. The stream may be down or unreachable.',
+          url: streamUrl
+        });
       }
     });
 
     proxyReq.on('error', (error) => {
-      console.error('Proxy error:', error);
+      console.error('Proxy error for URL:', streamUrl, error);
       if (!res.headersSent) {
         res.status(500).json({ 
           error: 'Failed to fetch stream',
-          message: error.message 
+          message: error.message || 'Unable to connect to stream server',
+          url: streamUrl
         });
       }
     });

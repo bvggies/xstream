@@ -307,9 +307,17 @@ const WatchMatch = () => {
                 // Provide more specific error messages
                 let errorMessage = 'Network error';
                 if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR) {
-                  errorMessage = 'Failed to load stream manifest. The stream may be unavailable or blocked.';
+                  if (useProxy) {
+                    errorMessage = 'Stream server is unreachable or blocking requests. The stream URL may be invalid or expired.';
+                  } else {
+                    errorMessage = 'Failed to load stream manifest. The stream may be unavailable or blocked.';
+                  }
                 } else if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT) {
-                  errorMessage = 'Stream manifest loading timeout. The server may be slow or unreachable.';
+                  if (useProxy) {
+                    errorMessage = 'Stream server is not responding (timeout). The stream may be down or the URL expired.';
+                  } else {
+                    errorMessage = 'Stream manifest loading timeout. The server may be slow or unreachable.';
+                  }
                 } else if (data.details === Hls.ErrorDetails.FRAG_LOAD_ERROR) {
                   errorMessage = 'Failed to load video segment. Trying to recover...';
                 } else if (data.details === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT) {
@@ -584,10 +592,13 @@ const WatchMatch = () => {
     const nextLink = match.streamingLinks[currentIndex + 1];
 
     if (nextLink) {
-      toast('Trying next stream...', { icon: '🔄' });
+      toast('Trying next stream...', { icon: '🔄', duration: 2000 });
       setSelectedLink(nextLink);
     } else {
-      toast.error('All streams failed. Please try again later.');
+      toast.error(
+        'All streams failed. The stream servers may be down or the URLs may be expired. Please try again later or contact support.',
+        { duration: 6000 }
+      );
     }
   };
 
