@@ -34,12 +34,30 @@ const HighlightPlayer = ({ videoLinks, title }) => {
       }
     }
 
-    // Handle HLS/M3U8 streams
-    if (selectedLink.includes('.m3u8') || selectedLink.includes('hls')) {
+    // Handle HLS/M3U8 streams - enhanced detection
+    const urlLower = selectedLink.toLowerCase();
+    const isHLS = urlLower.includes('.m3u8') || 
+                  urlLower.includes('.m3u') ||
+                  urlLower.includes('hls') ||
+                  urlLower.match(/\.m3u8(\?|$|#)/i) ||
+                  urlLower.match(/\.m3u(\?|$|#)/i);
+    
+    if (isHLS) {
       if (Hls.isSupported()) {
+        // Enhanced HLS configuration
         const hlsInstance = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
+          liveSyncDurationCount: 3,
+          liveMaxLatencyDurationCount: 5,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+          maxBufferSize: 60 * 1000 * 1000, // 60MB
+          xhrSetup: (xhr, url) => {
+            xhr.withCredentials = false;
+          },
+          capLevelToPlayerSize: true,
+          startLevel: -1, // Auto-select best quality
         });
 
         hlsInstance.loadSource(selectedLink);
@@ -50,16 +68,40 @@ const HighlightPlayer = ({ videoLinks, title }) => {
         });
 
         hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+          console.error('HLS Error:', data);
           if (data.fatal) {
-            toast.error('Stream error. Trying next source...');
-            tryNextLink();
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                toast.error('Network error. Trying to recover...');
+                try {
+                  hlsInstance.startLoad();
+                } catch (e) {
+                  tryNextLink();
+                }
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                toast.error('Media error. Trying to recover...');
+                try {
+                  hlsInstance.recoverMediaError();
+                } catch (e) {
+                  tryNextLink();
+                }
+                break;
+              default:
+                hlsInstance.destroy();
+                toast.error('Stream error. Trying next source...');
+                tryNextLink();
+                break;
+            }
           }
         });
 
         setHls(hlsInstance);
       } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-        // Native HLS support (Safari)
+        // Native HLS support (Safari/iOS)
         videoRef.current.src = selectedLink;
+      } else {
+        toast.error('HLS playback not supported in this browser.');
       }
     } else {
       // Direct video (MP4, etc.)
