@@ -215,7 +215,7 @@ const proxyM3U8 = async (req, res, next) => {
         'Accept': '*/*',
         'Accept-Language': '*',
       },
-      timeout: 30000, // 30 second timeout
+      timeout: 60000, // 60 second timeout for slow IPTV streams
     };
 
     const proxyReq = client.get(streamUrl, options, (proxyRes) => {
@@ -267,7 +267,7 @@ const proxyM3U8 = async (req, res, next) => {
     });
 
     // Set timeout
-    proxyReq.setTimeout(30000, () => {
+    proxyReq.setTimeout(60000, () => {
       proxyReq.destroy();
       if (!res.headersSent) {
         res.status(504).json({ error: 'Request timeout' });

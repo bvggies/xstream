@@ -318,14 +318,15 @@ const WatchMatch = () => {
                   errorMessage = 'Network connection error. Check your internet connection.';
                 }
 
-                if (retryCount < maxRetries) {
-                  retryCount++;
-                  
+                // Increment retry count first
+                retryCount++;
+                
+                if (retryCount <= maxRetries) {
                   // If this is the first retry and we haven't tried proxy yet, try proxy
                   if (retryCount === 1 && !useProxy && (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR || 
                       data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT)) {
                     console.log('Manifest load failed, trying proxy...');
-                    toast.info('CORS detected. Trying proxy...', { duration: 2000 });
+                    toast('CORS detected. Trying proxy...', { duration: 2000, icon: 'ℹ️' });
                     try {
                       hlsInstance.destroy();
                       // Create new HLS instance with same config but using proxy
@@ -472,7 +473,7 @@ const WatchMatch = () => {
                     data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT ||
                     data.details === Hls.ErrorDetails.MANIFEST_PARSING_ERROR)) {
                   console.log('Proxy failed, trying direct access...');
-                  toast.info('Proxy failed. Trying direct access...', { duration: 2000 });
+                  toast('Proxy failed. Trying direct access...', { duration: 2000, icon: 'ℹ️' });
                   try {
                     hlsInstance.destroy();
                     useProxy = false;
@@ -583,7 +584,7 @@ const WatchMatch = () => {
     const nextLink = match.streamingLinks[currentIndex + 1];
 
     if (nextLink) {
-      toast.info('Trying next stream...');
+      toast('Trying next stream...', { icon: '🔄' });
       setSelectedLink(nextLink);
     } else {
       toast.error('All streams failed. Please try again later.');
