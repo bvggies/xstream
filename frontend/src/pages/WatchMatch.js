@@ -256,17 +256,10 @@ const WatchMatch = () => {
           }
         };
 
-        // For M3U8 links, try proxy first to avoid CORS issues
-        // If proxy fails, we'll fall back to direct
-        const tryLoadWithProxy = () => {
-          console.log('Trying M3U8 stream with proxy first...');
-          useProxy = true;
-          const proxyUrl = getProxyUrl(url);
-          hlsInstance.loadSource(proxyUrl);
-        };
-
-        // Try proxy first for M3U8 streams
-        tryLoadWithProxy();
+        // For M3U8 links, try direct access first (many streams have proper CORS)
+        // Only use proxy if direct access fails with CORS
+        console.log('Trying M3U8 stream with direct access first...');
+        hlsInstance.loadSource(url);
         hlsInstance.attachMedia(videoRef.current);
 
         hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -331,50 +324,15 @@ const WatchMatch = () => {
                 
                 if (retryCount <= maxRetries) {
                   // If this is the first retry and we haven't tried proxy yet, try proxy
+                  // Only try proxy if it's a manifest load error (likely CORS)
                   if (retryCount === 1 && !useProxy && (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR || 
                       data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT)) {
-                    console.log('Manifest load failed, trying proxy...');
-                    toast('CORS detected. Trying proxy...', { duration: 2000, icon: 'ℹ️' });
+                    console.log('Direct access failed, trying proxy...');
+                    toast('Trying proxy...', { duration: 2000, icon: 'ℹ️' });
                     try {
                       hlsInstance.destroy();
                       // Create new HLS instance with same config but using proxy
-                      const newHlsInstance = new Hls({
-                        enableWorker: true,
-                        lowLatencyMode: true,
-                        liveSyncDurationCount: 3,
-                        liveMaxLatencyDurationCount: 5,
-                        maxBufferLength: 30,
-                        maxMaxBufferLength: 60,
-                        maxBufferSize: 60 * 1000 * 1000,
-                        maxBufferHole: 0.5,
-                        highBufferWatchdogPeriod: 2,
-                        nudgeOffset: 0.1,
-                        nudgeMaxRetry: 5,
-                        maxFragLoadingTimeOut: 60,
-                        fragLoadingTimeOut: 60,
-                        manifestLoadingTimeOut: 30,
-                        levelLoadingTimeOut: 60,
-                        manifestLoadingMaxRetry: 5,
-                        manifestLoadingRetryDelay: 1000,
-                        levelLoadingMaxRetry: 5,
-                        fragLoadingMaxRetry: 5,
-                        fragLoadingRetryDelay: 1000,
-                        xhrSetup: (xhr, url) => {
-                          xhr.withCredentials = false;
-                          if (xhr.setRequestHeader) {
-                            xhr.setRequestHeader('Accept', '*/*');
-                            xhr.setRequestHeader('Accept-Language', '*');
-                          }
-                        },
-                        debug: false,
-                        capLevelToPlayerSize: true,
-                        startLevel: -1,
-                        abrEwmaDefaultEstimate: 500000,
-                        abrBandWidthFactor: 0.95,
-                        abrBandWidthUpFactor: 0.7,
-                        maxStarvationDelay: 4,
-                        maxLoadingDelay: 4,
-                      });
+                      const newHlsInstance = createHlsInstance();
                       newHlsInstance.attachMedia(videoRef.current);
                       
                       // Set up event handlers for new instance

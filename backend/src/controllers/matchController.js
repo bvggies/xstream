@@ -240,25 +240,44 @@ const proxyM3U8 = async (req, res, next) => {
 
       proxyRes.on('end', () => {
         // Rewrite relative URLs in M3U8 manifest to absolute URLs
+        // This ensures child playlists and segments load from the original server
         if (data.includes('#EXT') || data.includes('.m3u8') || data.includes('.ts')) {
-          const baseUrl = `${parsedUrl.protocol}//${parsedUrl.host}${parsedUrl.pathname.substring(0, parsedUrl.pathname.lastIndexOf('/') + 1)}`;
+          // Get base URL for resolving relative paths
+          const pathParts = parsedUrl.pathname.split('/').filter(p => p);
+          const basePath = pathParts.length > 0 
+            ? `/${pathParts.slice(0, -1).join('/')}/` 
+            : '/';
+          const baseUrl = `${parsedUrl.protocol}//${parsedUrl.host}${basePath}`;
+          
           const lines = data.split('\n');
           const rewrittenLines = lines.map((line) => {
+            const trimmedLine = line.trim();
             // Skip comments and empty lines
-            if (line.trim().startsWith('#') || !line.trim()) {
-              return line;
+            if (trimmedLine.startsWith('#') || !trimmedLine) {
+              return line; // Keep original line (preserve whitespace)
             }
             // If line is a URL and it's relative, make it absolute
-            if (line.trim() && !line.trim().startsWith('http://') && !line.trim().startsWith('https://')) {
+            if (!trimmedLine.startsWith('http://') && !trimmedLine.startsWith('https://') && !trimmedLine.startsWith('data:')) {
               try {
-                const absoluteUrl = new URL(line.trim(), baseUrl);
+                // Handle relative paths correctly
+                let absoluteUrl;
+                if (trimmedLine.startsWith('/')) {
+                  // Absolute path on same domain
+                  absoluteUrl = new URL(trimmedLine, `${parsedUrl.protocol}//${parsedUrl.host}`);
+                } else {
+                  // Relative path
+                  absoluteUrl = new URL(trimmedLine, baseUrl);
+                }
                 return absoluteUrl.href;
               } catch (e) {
                 // If URL construction fails, try simple concatenation
-                return baseUrl + line.trim();
+                console.warn('Failed to construct absolute URL for:', trimmedLine, e.message);
+                return trimmedLine.startsWith('/') 
+                  ? `${parsedUrl.protocol}//${parsedUrl.host}${trimmedLine}`
+                  : `${baseUrl}${trimmedLine}`;
               }
             }
-            return line;
+            return line; // Keep absolute URLs as-is
           });
           data = rewrittenLines.join('\n');
         }
