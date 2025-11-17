@@ -185,7 +185,7 @@ const WatchMatch = () => {
       setEmbedUrl(null);
       
       if (Hls.isSupported()) {
-        // Enhanced HLS configuration for live streams
+        // Enhanced HLS configuration for live streams and IPTV
         const hlsInstance = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
@@ -197,27 +197,47 @@ const WatchMatch = () => {
           maxBufferHole: 0.5,
           highBufferWatchdogPeriod: 2,
           nudgeOffset: 0.1,
-          nudgeMaxRetry: 3,
-          maxFragLoadingTimeOut: 20,
-          fragLoadingTimeOut: 20,
-          manifestLoadingTimeOut: 10,
+          nudgeMaxRetry: 5, // Increased retry attempts
+          maxFragLoadingTimeOut: 60, // Increased timeout for IPTV streams
+          fragLoadingTimeOut: 60, // Increased timeout for IPTV streams
+          manifestLoadingTimeOut: 30, // Increased timeout for manifest loading
+          levelLoadingTimeOut: 60, // Timeout for level loading
+          manifestLoadingMaxRetry: 5, // Retry manifest loading
+          manifestLoadingRetryDelay: 1000, // Delay between retries
+          levelLoadingMaxRetry: 5, // Retry level loading
+          fragLoadingMaxRetry: 5, // Retry fragment loading
+          fragLoadingRetryDelay: 1000, // Delay between fragment retries
           xhrSetup: (xhr, url) => {
-            // Allow CORS for IPTV links
+            // Enhanced CORS handling for IPTV links
             xhr.withCredentials = false;
-            // Add headers if needed for authentication
-            // xhr.setRequestHeader('Authorization', 'Bearer token');
+            // Set CORS mode
+            if (xhr.setRequestHeader) {
+              // Some IPTV providers require specific headers
+              xhr.setRequestHeader('Accept', '*/*');
+              xhr.setRequestHeader('Accept-Language', '*');
+            }
           },
           // Enable better error recovery
           debug: false,
           capLevelToPlayerSize: true,
           startLevel: -1, // Auto-select best quality
+          // Additional IPTV-friendly settings
+          abrEwmaDefaultEstimate: 500000, // Default bitrate estimate
+          abrBandWidthFactor: 0.95,
+          abrBandWidthUpFactor: 0.7,
+          maxStarvationDelay: 4,
+          maxLoadingDelay: 4,
         });
+
+        let retryCount = 0;
+        const maxRetries = 3;
 
         hlsInstance.loadSource(url);
         hlsInstance.attachMedia(videoRef.current);
 
         hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
           console.log('HLS manifest parsed successfully');
+          retryCount = 0; // Reset retry count on successful manifest parse
           // Auto-play if match is LIVE or if access is granted (2 minutes before)
           if (match?.status === 'LIVE' || accessGranted) {
             videoRef.current?.play().catch((err) => {
@@ -230,39 +250,107 @@ const WatchMatch = () => {
           console.log('HLS quality switched to level:', data.level);
         });
 
+        hlsInstance.on(Hls.Events.FRAG_LOADED, () => {
+          retryCount = 0; // Reset retry count on successful fragment load
+        });
+
         hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-          console.error('HLS Error:', data);
+          console.error('HLS Error:', {
+            type: data.type,
+            details: data.details,
+            fatal: data.fatal,
+            url: data.url || url,
+            error: data.error,
+          });
+
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
-                console.log('Network error, attempting to recover...');
-                toast.error('Network error. Trying to recover...');
-                try {
-                  hlsInstance.startLoad();
-                } catch (e) {
-                  console.error('Recovery failed:', e);
-                  tryNextLink();
+                console.log(`Network error (attempt ${retryCount + 1}/${maxRetries}), attempting to recover...`);
+                
+                // Provide more specific error messages
+                let errorMessage = 'Network error';
+                if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR) {
+                  errorMessage = 'Failed to load stream manifest. The stream may be unavailable or blocked.';
+                } else if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT) {
+                  errorMessage = 'Stream manifest loading timeout. The server may be slow or unreachable.';
+                } else if (data.details === Hls.ErrorDetails.FRAG_LOAD_ERROR) {
+                  errorMessage = 'Failed to load video segment. Trying to recover...';
+                } else if (data.details === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT) {
+                  errorMessage = 'Video segment loading timeout. Trying to recover...';
+                } else if (data.details === Hls.ErrorDetails.NETWORK_ERROR) {
+                  errorMessage = 'Network connection error. Check your internet connection.';
+                }
+
+                if (retryCount < maxRetries) {
+                  retryCount++;
+                  toast.error(`${errorMessage} (Retry ${retryCount}/${maxRetries})`, { duration: 3000 });
+                  
+                  try {
+                    // Try to recover by restarting the load
+                    if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR || 
+                        data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT) {
+                      // For manifest errors, reload the source
+                      hlsInstance.loadSource(url);
+                    } else {
+                      // For fragment errors, try to start loading again
+                      hlsInstance.startLoad();
+                    }
+                  } catch (e) {
+                    console.error('Recovery attempt failed:', e);
+                    if (retryCount >= maxRetries) {
+                      toast.error('Unable to recover. Trying next stream...', { duration: 4000 });
+                      setTimeout(() => tryNextLink(), 2000);
+                    }
+                  }
+                } else {
+                  console.error('Max retries reached, trying next link');
+                  toast.error('Stream failed after multiple attempts. Trying next stream...', { duration: 4000 });
+                  setTimeout(() => tryNextLink(), 2000);
                 }
                 break;
+
               case Hls.ErrorTypes.MEDIA_ERROR:
-                console.log('Media error, attempting to recover...');
-                toast.error('Media error. Trying to recover...');
-                try {
-                  hlsInstance.recoverMediaError();
-                } catch (e) {
-                  console.error('Recovery failed:', e);
-                  tryNextLink();
+                console.log(`Media error (attempt ${retryCount + 1}/${maxRetries}), attempting to recover...`);
+                
+                let mediaErrorMessage = 'Media playback error';
+                if (data.details === Hls.ErrorDetails.FRAG_PARSING_ERROR) {
+                  mediaErrorMessage = 'Video segment parsing error. Trying to recover...';
+                } else if (data.details === Hls.ErrorDetails.FRAG_DECRYPT_ERROR) {
+                  mediaErrorMessage = 'Video decryption error. The stream may be encrypted.';
+                }
+
+                if (retryCount < maxRetries) {
+                  retryCount++;
+                  toast.error(`${mediaErrorMessage} (Retry ${retryCount}/${maxRetries})`, { duration: 3000 });
+                  
+                  try {
+                    hlsInstance.recoverMediaError();
+                  } catch (e) {
+                    console.error('Media recovery failed:', e);
+                    if (retryCount >= maxRetries) {
+                      toast.error('Unable to recover. Trying next stream...', { duration: 4000 });
+                      setTimeout(() => tryNextLink(), 2000);
+                    }
+                  }
+                } else {
+                  console.error('Max retries reached, trying next link');
+                  toast.error('Stream failed after multiple attempts. Trying next stream...', { duration: 4000 });
+                  setTimeout(() => tryNextLink(), 2000);
                 }
                 break;
+
               default:
                 console.error('Fatal error, destroying HLS instance');
+                toast.error('Stream error. Trying next stream...', { duration: 4000 });
                 hlsInstance.destroy();
-                tryNextLink();
+                setTimeout(() => tryNextLink(), 2000);
                 break;
             }
           } else {
             // Non-fatal errors, log but continue
             console.warn('Non-fatal HLS error:', data);
+            // Don't show toast for non-fatal errors to avoid spam
           }
         });
 
@@ -270,7 +358,33 @@ const WatchMatch = () => {
       } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
         // Native HLS support (Safari/iOS)
         console.log('Using native HLS support');
+        videoRef.current.crossOrigin = 'anonymous';
         videoRef.current.src = url;
+        
+        videoRef.current.addEventListener('error', (e) => {
+          console.error('Native HLS video error:', e);
+          const error = videoRef.current.error;
+          if (error) {
+            let errorMessage = 'Video playback error';
+            switch (error.code) {
+              case error.MEDIA_ERR_ABORTED:
+                errorMessage = 'Video playback aborted';
+                break;
+              case error.MEDIA_ERR_NETWORK:
+                errorMessage = 'Network error while loading video';
+                break;
+              case error.MEDIA_ERR_DECODE:
+                errorMessage = 'Video decoding error';
+                break;
+              case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                errorMessage = 'Video format not supported';
+                break;
+            }
+            toast.error(errorMessage);
+            tryNextLink();
+          }
+        });
+
         videoRef.current.addEventListener('loadedmetadata', () => {
           if (match?.status === 'LIVE' || accessGranted) {
             videoRef.current.play().catch((err) => {
