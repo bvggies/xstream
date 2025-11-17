@@ -155,6 +155,13 @@ const WatchMatch = () => {
       setHls(null);
     }
 
+    // Reset video element when switching streams
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.src = '';
+      videoRef.current.load(); // Reset the video element
+    }
+
     const url = selectedLink.url;
     const type = selectedLink.type;
     const linkType = detectLinkType(url, type);
@@ -709,6 +716,7 @@ const WatchMatch = () => {
                     <>
                       {playerType === 'youtube' && embedUrl ? (
                         <iframe
+                          key={`youtube-${selectedLink?.id}`}
                           src={embedUrl}
                           className="w-full h-full"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -718,6 +726,7 @@ const WatchMatch = () => {
                         />
                       ) : playerType === 'iframe' && embedUrl ? (
                         <iframe
+                          key={`iframe-${selectedLink?.id}`}
                           src={embedUrl}
                           className="w-full h-full"
                           allow="autoplay; fullscreen; picture-in-picture"
@@ -727,6 +736,7 @@ const WatchMatch = () => {
                         />
                       ) : (
                         <video
+                          key={`video-${selectedLink?.id}`}
                           ref={videoRef}
                           controls
                           className="w-full h-full"
