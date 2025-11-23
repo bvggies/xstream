@@ -255,6 +255,12 @@ const proxyM3U8 = async (req, res, next) => {
       console.log('Proxy M3U8 - Base URL:', baseUrl);
       console.log('Proxy M3U8 - Proxy Base URL:', proxyBaseUrl);
       console.log('Proxy M3U8 - Original URL:', streamUrl);
+      console.log('Proxy M3U8 - Request headers:', {
+        host: req.headers.host,
+        'x-forwarded-host': req.headers['x-forwarded-host'],
+        'x-forwarded-proto': req.headers['x-forwarded-proto'],
+        protocol: req.protocol
+      });
 
       // Get base URL for resolving relative paths
       const pathParts = parsedUrl.pathname.split('/').filter(p => p);
@@ -313,6 +319,9 @@ const proxyM3U8 = async (req, res, next) => {
       console.log('Proxy M3U8 - Rewritten playlist (first 500 chars):', body.substring(0, 500));
 
       res.setHeader('Content-Type', 'application/vnd.apple.mpegURL');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.send(body);
     } catch (err) {
       console.error('Proxy M3U8 error:', err.message);
