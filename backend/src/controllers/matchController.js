@@ -2,6 +2,7 @@ const prisma = require('../utils/prisma');
 const https = require('https');
 const http = require('http');
 const { URL } = require('url');
+const axios = require('axios');
 
 const getMatches = async (req, res, next) => {
   try {
@@ -185,7 +186,20 @@ const watchMatch = async (req, res, next) => {
   }
 };
 
-// Proxy M3U8 manifest to bypass CORS
+// Helper function to get base URL for proxy
+const getBaseUrl = (req) => {
+  // Try to get from environment variable first (for Vercel)
+  if (process.env.BASE_URL) {
+    return process.env.BASE_URL;
+  }
+  
+  // Fallback to constructing from request
+  const protocol = req.protocol || 'https';
+  const host = req.get('host') || req.headers.host;
+  return `${protocol}://${host}`;
+};
+
+// Proxy M3U8 manifest to bypass CORS and rewrite URLs
 const proxyM3U8 = async (req, res, next) => {
   try {
     const { url: streamUrl } = req.query;
@@ -207,111 +221,199 @@ const proxyM3U8 = async (req, res, next) => {
       return res.status(400).json({ error: 'Only HTTP/HTTPS URLs are allowed' });
     }
 
-    const client = parsedUrl.protocol === 'https:' ? https : http;
+    // Set CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    const options = {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': '*/*',
-        'Accept-Language': '*',
-      },
-      timeout: 60000, // 60 second timeout for slow IPTV streams
-    };
-
-    const proxyReq = client.get(streamUrl, options, (proxyRes) => {
-      // Set CORS headers
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-      res.setHeader('Content-Type', proxyRes.headers['content-type'] || 'application/vnd.apple.mpegurl');
-
-      // Handle redirects
-      if (proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location) {
-        return res.redirect(proxyRes.statusCode, `/api/matches/proxy-m3u8?url=${encodeURIComponent(proxyRes.headers.location)}`);
-      }
-
-      res.status(proxyRes.statusCode);
-
-      let data = '';
-      proxyRes.on('data', (chunk) => {
-        data += chunk;
+    try {
+      const response = await axios.get(streamUrl, {
+        responseType: 'text',
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': '*/*',
+          'Accept-Language': '*',
+        },
+        timeout: 60000, // 60 second timeout
+        maxRedirects: 5,
       });
 
-      proxyRes.on('end', () => {
-        // Rewrite relative URLs in M3U8 manifest to absolute URLs
-        // This ensures child playlists and segments load from the original server
-        if (data.includes('#EXT') || data.includes('.m3u8') || data.includes('.ts')) {
-          // Get base URL for resolving relative paths
-          const pathParts = parsedUrl.pathname.split('/').filter(p => p);
-          const basePath = pathParts.length > 0 
-            ? `/${pathParts.slice(0, -1).join('/')}/` 
-            : '/';
-          const baseUrl = `${parsedUrl.protocol}//${parsedUrl.host}${basePath}`;
-          
-          const lines = data.split('\n');
-          const rewrittenLines = lines.map((line) => {
-            const trimmedLine = line.trim();
-            // Skip comments and empty lines
-            if (trimmedLine.startsWith('#') || !trimmedLine) {
-              return line; // Keep original line (preserve whitespace)
-            }
-            // If line is a URL and it's relative, make it absolute
-            if (!trimmedLine.startsWith('http://') && !trimmedLine.startsWith('https://') && !trimmedLine.startsWith('data:')) {
-              try {
-                // Handle relative paths correctly
-                let absoluteUrl;
-                if (trimmedLine.startsWith('/')) {
-                  // Absolute path on same domain
-                  absoluteUrl = new URL(trimmedLine, `${parsedUrl.protocol}//${parsedUrl.host}`);
-                } else {
-                  // Relative path
-                  absoluteUrl = new URL(trimmedLine, baseUrl);
-                }
-                return absoluteUrl.href;
-              } catch (e) {
-                // If URL construction fails, try simple concatenation
-                console.warn('Failed to construct absolute URL for:', trimmedLine, e.message);
-                return trimmedLine.startsWith('/') 
-                  ? `${parsedUrl.protocol}//${parsedUrl.host}${trimmedLine}`
-                  : `${baseUrl}${trimmedLine}`;
-              }
-            }
-            return line; // Keep absolute URLs as-is
-          });
-          data = rewrittenLines.join('\n');
+      let body = response.data;
+
+      // Get base URL for proxy
+      const baseUrl = getBaseUrl(req);
+      const proxyBaseUrl = `${baseUrl}/api/matches/proxy`;
+
+      // Get base URL for resolving relative paths
+      const pathParts = parsedUrl.pathname.split('/').filter(p => p);
+      const basePath = pathParts.length > 0 
+        ? `/${pathParts.slice(0, -1).join('/')}/` 
+        : '/';
+      const baseUrlForResolve = `${parsedUrl.protocol}//${parsedUrl.host}${basePath}`;
+
+      // Process line by line to rewrite URLs
+      const lines = body.split('\n');
+      const rewrittenLines = lines.map((line) => {
+        const trimmedLine = line.trim();
+        // Skip comments and empty lines
+        if (trimmedLine.startsWith('#') || !trimmedLine) {
+          return line; // Keep original line (preserve whitespace)
         }
-
-        res.send(data);
+        
+        // Skip data URIs
+        if (trimmedLine.startsWith('data:')) {
+          return line;
+        }
+        
+        // Check if this line is already proxied (contains our proxy URL)
+        if (trimmedLine.includes(proxyBaseUrl)) {
+          return line; // Already proxied, skip
+        }
+        
+        // Handle absolute URLs
+        if (trimmedLine.startsWith('http://') || trimmedLine.startsWith('https://')) {
+          return `${proxyBaseUrl}?url=${encodeURIComponent(trimmedLine)}`;
+        }
+        
+        // Handle relative URLs - make them absolute first, then proxy
+        try {
+          let absoluteUrl;
+          if (trimmedLine.startsWith('/')) {
+            // Absolute path on same domain
+            absoluteUrl = new URL(trimmedLine, `${parsedUrl.protocol}//${parsedUrl.host}`);
+          } else {
+            // Relative path
+            absoluteUrl = new URL(trimmedLine, baseUrlForResolve);
+          }
+          // Now proxy the absolute URL
+          return `${proxyBaseUrl}?url=${encodeURIComponent(absoluteUrl.href)}`;
+        } catch (e) {
+          // If URL construction fails, try simple concatenation
+          console.warn('Failed to construct absolute URL for:', trimmedLine, e.message);
+          const absoluteUrl = trimmedLine.startsWith('/') 
+            ? `${parsedUrl.protocol}//${parsedUrl.host}${trimmedLine}`
+            : `${parsedUrl.protocol}//${parsedUrl.host}${basePath}${trimmedLine}`;
+          return `${proxyBaseUrl}?url=${encodeURIComponent(absoluteUrl)}`;
+        }
       });
-    });
+      body = rewrittenLines.join('\n');
 
-    // Set timeout
-    proxyReq.setTimeout(60000, () => {
-      console.error('Proxy timeout for URL:', streamUrl);
-      proxyReq.destroy();
-      if (!res.headersSent) {
+      res.setHeader('Content-Type', 'application/vnd.apple.mpegURL');
+      res.send(body);
+    } catch (err) {
+      console.error('Proxy M3U8 error:', err.message);
+      if (err.response) {
+        res.status(err.response.status).json({ 
+          error: 'Proxy failed', 
+          detail: err.message,
+          status: err.response.status 
+        });
+      } else if (err.code === 'ECONNABORTED') {
         res.status(504).json({ 
           error: 'Request timeout',
           message: 'The stream server did not respond within 60 seconds. The stream may be down or unreachable.',
           url: streamUrl
         });
-      }
-    });
-
-    proxyReq.on('error', (error) => {
-      console.error('Proxy error for URL:', streamUrl, error);
-      if (!res.headersSent) {
+      } else {
         res.status(500).json({ 
-          error: 'Failed to fetch stream',
-          message: error.message || 'Unable to connect to stream server',
+          error: 'Proxy failed', 
+          detail: err.message,
           url: streamUrl
         });
       }
-    });
-
+    }
   } catch (error) {
     console.error('Proxy M3U8 error:', error);
+    next(error);
+  }
+};
+
+// Proxy segments, child playlists, key files, etc.
+const proxySegment = async (req, res, next) => {
+  try {
+    const { url: fileUrl } = req.query;
+
+    if (!fileUrl) {
+      return res.status(400).json({ error: 'File URL is required' });
+    }
+
+    // Validate URL
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(fileUrl);
+    } catch (error) {
+      return res.status(400).json({ error: 'Invalid URL format' });
+    }
+
+    // Only allow http/https protocols
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      return res.status(400).json({ error: 'Only HTTP/HTTPS URLs are allowed' });
+    }
+
+    // Set CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    try {
+      const response = await axios.get(fileUrl, {
+        responseType: 'arraybuffer',
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': '*/*',
+        },
+        timeout: 60000, // 60 second timeout
+        maxRedirects: 5,
+      });
+
+      // Determine content type based on file extension or response headers
+      let contentType = response.headers['content-type'];
+      if (!contentType) {
+        const ext = fileUrl.split('.').pop()?.toLowerCase();
+        const contentTypes = {
+          'ts': 'video/mp2t',
+          'm4s': 'video/iso.segment',
+          'key': 'application/octet-stream',
+          'm3u8': 'application/vnd.apple.mpegURL',
+        };
+        contentType = contentTypes[ext] || 'application/octet-stream';
+      }
+
+      res.setHeader('Content-Type', contentType);
+      
+      // Copy relevant headers
+      if (response.headers['content-length']) {
+        res.setHeader('Content-Length', response.headers['content-length']);
+      }
+      if (response.headers['cache-control']) {
+        res.setHeader('Cache-Control', response.headers['cache-control']);
+      }
+
+      res.send(Buffer.from(response.data));
+    } catch (err) {
+      console.error('Proxy segment error:', err.message);
+      if (err.response) {
+        res.status(err.response.status).json({ 
+          error: 'Segment proxy failed', 
+          detail: err.message,
+          status: err.response.status 
+        });
+      } else if (err.code === 'ECONNABORTED') {
+        res.status(504).json({ 
+          error: 'Request timeout',
+          message: 'The segment server did not respond within 60 seconds.',
+          url: fileUrl
+        });
+      } else {
+        res.status(500).json({ 
+          error: 'Segment proxy failed', 
+          detail: err.message,
+          url: fileUrl
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Proxy segment error:', error);
     next(error);
   }
 };
@@ -321,5 +423,6 @@ module.exports = {
   getMatchById,
   watchMatch,
   proxyM3U8,
+  proxySegment,
 };
 
