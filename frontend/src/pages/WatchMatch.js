@@ -16,6 +16,12 @@ const getProxyUrl = (originalUrl) => {
   return `${API_URL}/matches/proxy-m3u8?url=${encodeURIComponent(originalUrl)}`;
 };
 
+// Helper function to get proxy URL for video segments (.ts, .m4s, etc.)
+const getSegmentProxyUrl = (originalUrl) => {
+  const API_URL = axiosInstance.defaults.baseURL || process.env.REACT_APP_API_URL || 'https://xstream-backend.vercel.app/api';
+  return `${API_URL}/matches/proxy?url=${encodeURIComponent(originalUrl)}`;
+};
+
 const WatchMatch = () => {
   const { id } = useParams();
   const videoRef = useRef(null);
@@ -114,6 +120,16 @@ const WatchMatch = () => {
       urlLower.match(/\.m3u(\?|$|#)/i)
     ) {
       return 'hls';
+    }
+    
+    // Check for MPEG-TS (.ts) files
+    if (
+      type === 'TS' ||
+      type === 'MPEG-TS' ||
+      urlLower.includes('.ts') ||
+      urlLower.match(/\.ts(\?|$|#)/i)
+    ) {
+      return 'ts';
     }
     
     // Check for iframe type
@@ -554,6 +570,57 @@ const WatchMatch = () => {
       } else {
         toast.error('HLS playback not supported in this browser. Please use Chrome, Firefox, or Safari.');
       }
+      return;
+    }
+
+    // Handle MPEG-TS (.ts) files - proxy through backend to handle CORS
+    if (linkType === 'ts' && videoRef.current) {
+      setPlayerType('video');
+      setEmbedUrl(null);
+      
+      // Use proxy to handle CORS issues with .ts files
+      const proxiedUrl = getSegmentProxyUrl(url);
+      console.log('Loading .ts file via proxy:', proxiedUrl);
+      
+      videoRef.current.crossOrigin = 'anonymous';
+      videoRef.current.src = proxiedUrl;
+      videoRef.current.load();
+      
+      // Set up error handling
+      const handleError = (e) => {
+        console.error('TS video error:', e);
+        const error = videoRef.current.error;
+        if (error) {
+          let errorMessage = 'Video playback error';
+          switch (error.code) {
+            case error.MEDIA_ERR_ABORTED:
+              errorMessage = 'Video playback aborted';
+              break;
+            case error.MEDIA_ERR_NETWORK:
+              errorMessage = 'Network error while loading video';
+              break;
+            case error.MEDIA_ERR_DECODE:
+              errorMessage = 'Video decoding error - format may not be supported';
+              break;
+            case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+              errorMessage = 'Video format not supported by browser';
+              break;
+          }
+          toast.error(errorMessage);
+        }
+      };
+      
+      videoRef.current.addEventListener('error', handleError, { once: true });
+      
+      videoRef.current.addEventListener('loadedmetadata', () => {
+        console.log('TS video metadata loaded');
+        if (match?.status === 'LIVE' || accessGranted) {
+          videoRef.current.play().catch((err) => {
+            console.log('Auto-play prevented:', err);
+          });
+        }
+      }, { once: true });
+      
       return;
     }
 
