@@ -247,6 +247,18 @@ const proxyM3U8 = async (req, res, next) => {
       });
 
       let body = response.data;
+      
+      // Check playlist size
+      const playlistSize = Buffer.byteLength(body, 'utf8');
+      const playlistSizeMB = (playlistSize / 1024 / 1024).toFixed(2);
+      const lineCount = body.split('\n').length;
+      
+      console.log('Proxy M3U8 - Playlist size:', `${playlistSizeMB} MB`, `(${lineCount} lines)`);
+      
+      // Warn if playlist is very large (might cause issues)
+      if (playlistSize > 10 * 1024 * 1024) { // 10MB
+        console.warn('Proxy M3U8 - WARNING: Very large playlist detected. This may cause timeouts or exceed function limits.');
+      }
 
       // Get base URL for proxy
       const baseUrl = getBaseUrl(req);
@@ -270,8 +282,13 @@ const proxyM3U8 = async (req, res, next) => {
       const baseUrlForResolve = `${parsedUrl.protocol}//${parsedUrl.host}${basePath}`;
 
       // Process line by line to rewrite URLs
+      console.log('Proxy M3U8 - Starting URL rewriting...');
       const lines = body.split('\n');
-      const rewrittenLines = lines.map((line) => {
+      const rewrittenLines = lines.map((line, index) => {
+        // Log progress for large playlists
+        if (lines.length > 1000 && index % 1000 === 0) {
+          console.log(`Proxy M3U8 - Processing line ${index}/${lines.length}...`);
+        }
         const trimmedLine = line.trim();
         // Skip comments and empty lines
         if (trimmedLine.startsWith('#') || !trimmedLine) {
@@ -316,6 +333,8 @@ const proxyM3U8 = async (req, res, next) => {
       });
       body = rewrittenLines.join('\n');
       
+      console.log('Proxy M3U8 - URL rewriting complete');
+      console.log('Proxy M3U8 - Rewritten playlist size:', `${(Buffer.byteLength(body, 'utf8') / 1024 / 1024).toFixed(2)} MB`);
       console.log('Proxy M3U8 - Rewritten playlist (first 500 chars):', body.substring(0, 500));
 
       res.setHeader('Content-Type', 'application/vnd.apple.mpegURL');
