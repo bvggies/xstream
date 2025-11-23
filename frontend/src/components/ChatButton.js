@@ -257,13 +257,8 @@ const ChatButton = () => {
       // Add message to local state (message is already saved via HTTP)
       setMessages((prev) => [...prev, response.data.message]);
 
-      // Socket emit is optional - HTTP endpoint will handle broadcasting
-      // But we can emit for real-time updates if socket is connected
-      if (socket && socket.connected) {
-        socket.emit('send_message', {
-          message: messageToSend,
-        });
-      }
+      // Message will be broadcast via Supabase Realtime by the backend
+      // No need to emit here - HTTP endpoint handles broadcasting
 
       // Refresh chat history to get latest messages
       setTimeout(() => {
