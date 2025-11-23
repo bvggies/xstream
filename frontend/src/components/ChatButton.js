@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { FiMessageCircle, FiX, FiSend, FiSearch } from 'react-icons/fi';
 import axiosInstance from '../utils/axios';
-import { getSocket } from '../utils/socket';
+import { initSocket, subscribeToUserMessages, subscribeToAdminMessages } from '../utils/socket';
 import toast from 'react-hot-toast';
 
 const ChatButton = () => {
@@ -17,7 +17,8 @@ const ChatButton = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const socket = getSocket();
+  const userChannelRef = useRef(null);
+  const adminChannelRef = useRef(null);
 
   useEffect(() => {
     if (!user) return;
@@ -25,29 +26,40 @@ const ChatButton = () => {
     fetchChatHistory();
     fetchUnreadCount();
 
-    if (socket) {
-      socket.on('new_message', handleNewMessage);
-      socket.on('message_seen', handleMessageSeen);
+    // Initialize Supabase Realtime and subscribe to messages
+    const setupRealtime = async () => {
+      await initSocket();
+      
+      // Subscribe to user messages
+      const userChannel = subscribeToUserMessages(user.id, handleNewMessage);
+      userChannelRef.current = userChannel;
 
-      return () => {
-        socket.off('new_message', handleNewMessage);
-        socket.off('message_seen', handleMessageSeen);
-      };
-    } else {
-      // If socket not available, poll for new messages (especially for admins)
-      const pollInterval = setInterval(() => {
-        if (user) {
-          fetchChatHistory();
-          fetchUnreadCount();
-        }
-      }, 5000); // Poll every 5 seconds
+      // If admin, also subscribe to admin channel
+      if (user.role === 'ADMIN') {
+        const adminChannel = subscribeToAdminMessages(handleNewMessage);
+        adminChannelRef.current = adminChannel;
+      }
+    };
 
-      return () => clearInterval(pollInterval);
-    }
-  }, [user, socket]);
+    setupRealtime();
+
+    // Fallback polling if Supabase not available
+    const pollInterval = setInterval(() => {
+      if (user) {
+        fetchChatHistory();
+        fetchUnreadCount();
+      }
+    }, 5000); // Poll every 5 seconds
+
+    return () => {
+      clearInterval(pollInterval);
+      userChannelRef.current = null;
+      adminChannelRef.current = null;
+    };
+  }, [user]);
 
   useEffect(() => {
-    if (isOpen && socket && selectedUserId) {
+    if (isOpen && selectedUserId) {
       // Mark messages as seen when chat opens or user changes
       markMessagesAsSeen();
     }

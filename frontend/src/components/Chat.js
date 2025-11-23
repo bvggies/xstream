@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getSocket } from '../utils/socket';
+import { initSocket, subscribeToUserMessages, subscribeToAdminMessages } from '../utils/socket';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiSend, FiMessageCircle } from 'react-icons/fi';
 import axiosInstance from '../utils/axios';
@@ -11,21 +11,37 @@ const Chat = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef(null);
-  const socket = getSocket();
+  const userChannelRef = useRef(null);
+  const adminChannelRef = useRef(null);
 
   useEffect(() => {
     fetchChatHistory();
 
-    if (socket) {
-      socket.on('new_message', handleNewMessage);
-      socket.on('user_typing', handleTyping);
+    // Initialize Supabase Realtime and subscribe to messages
+    const setupRealtime = async () => {
+      await initSocket();
+      
+      if (user) {
+        // Subscribe to user messages
+        const userChannel = subscribeToUserMessages(user.id, handleNewMessage);
+        userChannelRef.current = userChannel;
 
-      return () => {
-        socket.off('new_message', handleNewMessage);
-        socket.off('user_typing', handleTyping);
-      };
-    }
-  }, [socket]);
+        // If admin, also subscribe to admin channel
+        if (user.role === 'ADMIN') {
+          const adminChannel = subscribeToAdminMessages(handleNewMessage);
+          adminChannelRef.current = adminChannel;
+        }
+      }
+    };
+
+    setupRealtime();
+
+    return () => {
+      // Cleanup channels will be handled by unsubscribe functions
+      userChannelRef.current = null;
+      adminChannelRef.current = null;
+    };
+  }, [user]);
 
   useEffect(() => {
     scrollToBottom();
@@ -52,18 +68,15 @@ const Chat = () => {
 
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!inputMessage.trim() || !socket) return;
+    if (!inputMessage.trim()) return;
 
     try {
       const response = await axiosInstance.post('/chat/send', {
         message: inputMessage,
       });
 
-      socket.emit('send_message', {
-        message: inputMessage,
-        targetUserId: user.role === 'ADMIN' ? undefined : undefined, // Admin can target users
-      });
-
+      // Message will be added via realtime subscription
+      // But we can also add it optimistically
       setMessages((prev) => [...prev, response.data.message]);
       setInputMessage('');
     } catch (error) {

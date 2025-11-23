@@ -1,5 +1,5 @@
 const prisma = require('../utils/prisma');
-const { getIO } = require('../utils/socketInstance');
+const { broadcastMessage } = require('../utils/supabase');
 
 const getChatHistory = async (req, res, next) => {
   try {
@@ -128,45 +128,43 @@ const sendMessage = async (req, res, next) => {
       },
     });
 
-    // Emit via Socket.io if available
-    if (io) {
-      if (req.user.role === 'ADMIN') {
-        // Admin sending to specific user
-        const messageData = {
-          id: chatMessage.id,
-          userId: messageUserId,
-          username: userInfo?.username,
-          message: chatMessage.message,
-          isAdmin: true,
-          createdAt: chatMessage.createdAt,
-        };
-        
-        // Send to the user
-        io.to(`user:${messageUserId}`).emit('new_message', messageData);
-        
-        // Also notify admin room so all admins see the update
-        io.to('admin').emit('new_message', messageData);
-      } else {
-        // User sending to admin - broadcast to all admins
-        const messageData = {
-          id: chatMessage.id,
-          userId: req.user.id,
-          username: req.user.username,
-          email: req.user.email,
-          message: chatMessage.message,
-          isAdmin: false,
-          createdAt: chatMessage.createdAt,
-        };
-        
-        // Broadcast to admin room
-        io.to('admin').emit('new_message', messageData);
-        
-        // Also emit to sender's room for confirmation
-        io.to(`user:${req.user.id}`).emit('new_message', {
-          ...messageData,
-          isAdmin: false,
-        });
-      }
+    // Broadcast via Supabase Realtime
+    if (req.user.role === 'ADMIN') {
+      // Admin sending to specific user
+      const messageData = {
+        id: chatMessage.id,
+        userId: messageUserId,
+        username: userInfo?.username,
+        message: chatMessage.message,
+        isAdmin: true,
+        createdAt: chatMessage.createdAt,
+      };
+      
+      // Send to the user
+      await broadcastMessage(`user:${messageUserId}`, 'new_message', messageData);
+      
+      // Also notify admin room so all admins see the update
+      await broadcastMessage('admin', 'new_message', messageData);
+    } else {
+      // User sending to admin - broadcast to all admins
+      const messageData = {
+        id: chatMessage.id,
+        userId: req.user.id,
+        username: req.user.username,
+        email: req.user.email,
+        message: chatMessage.message,
+        isAdmin: false,
+        createdAt: chatMessage.createdAt,
+      };
+      
+      // Broadcast to admin room
+      await broadcastMessage('admin', 'new_message', messageData);
+      
+      // Also emit to sender's room for confirmation
+      await broadcastMessage(`user:${req.user.id}`, 'new_message', {
+        ...messageData,
+        isAdmin: false,
+      });
     }
 
     res.status(201).json({ message: chatMessage });

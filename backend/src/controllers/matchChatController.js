@@ -1,5 +1,5 @@
 const prisma = require('../utils/prisma');
-const { getIO } = require('../utils/socketInstance');
+const { broadcastMessage } = require('../utils/supabase');
 
 const getMatchChatHistory = async (req, res, next) => {
   try {
@@ -76,18 +76,16 @@ const sendMatchChatMessage = async (req, res, next) => {
       },
     });
 
-    // Emit via Socket.io if available
-    if (io) {
-      io.to(`match:${matchId}`).emit('match_chat_message', {
-        id: chatMessage.id,
-        matchId,
-        userId: chatMessage.userId,
-        username: chatMessage.user.username,
-        avatar: chatMessage.user.avatar,
-        message: chatMessage.message,
-        createdAt: chatMessage.createdAt,
-      });
-    }
+    // Broadcast via Supabase Realtime
+    await broadcastMessage(`match:${matchId}`, 'match_chat_message', {
+      id: chatMessage.id,
+      matchId,
+      userId: chatMessage.userId,
+      username: chatMessage.user.username,
+      avatar: chatMessage.user.avatar,
+      message: chatMessage.message,
+      createdAt: chatMessage.createdAt,
+    });
 
     res.status(201).json({ message: chatMessage });
   } catch (error) {

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { FiSend, FiMessageCircle, FiUsers } from 'react-icons/fi';
 import axiosInstance from '../utils/axios';
-import { getSocket } from '../utils/socket';
+import { initSocket, joinMatchChat, leaveMatchChat } from '../utils/socket';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 
@@ -14,31 +14,30 @@ const MatchChat = ({ matchId }) => {
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
   const messagesEndRef = useRef(null);
-  const socket = getSocket();
+  const channelRef = useRef(null);
 
   useEffect(() => {
     if (!user || !matchId) return;
 
     fetchChatHistory();
 
-    // Join match chat room via socket
-    if (socket) {
-      socket.emit('join_match_chat', matchId);
-      socket.on('match_chat_message', handleNewMessage);
+    // Initialize Supabase Realtime and join match chat room
+    const setupRealtime = async () => {
+      await initSocket();
+      const channel = joinMatchChat(matchId, handleNewMessage);
+      channelRef.current = channel;
+    };
 
-      return () => {
-        socket.emit('leave_match_chat', matchId);
-        socket.off('match_chat_message', handleNewMessage);
-      };
-    } else {
-      // Poll for new messages if socket not available
-      const pollInterval = setInterval(() => {
-        fetchChatHistory();
-      }, 3000);
+    setupRealtime();
 
-      return () => clearInterval(pollInterval);
-    }
-  }, [user, matchId, socket]);
+    return () => {
+      // Leave match chat room
+      if (channelRef.current) {
+        leaveMatchChat(matchId);
+        channelRef.current = null;
+      }
+    };
+  }, [user, matchId]);
 
   useEffect(() => {
     scrollToBottom();
