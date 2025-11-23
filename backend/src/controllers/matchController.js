@@ -324,23 +324,46 @@ const proxyM3U8 = async (req, res, next) => {
       res.setHeader('Expires', '0');
       res.send(body);
     } catch (err) {
-      console.error('Proxy M3U8 error:', err.message);
+      console.error('Proxy M3U8 error:', {
+        message: err.message,
+        code: err.code,
+        response: err.response ? {
+          status: err.response.status,
+          statusText: err.response.statusText,
+          data: err.response.data?.substring(0, 200)
+        } : null,
+        stack: err.stack
+      });
+      
+      // Set CORS headers even on error
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      
       if (err.response) {
         res.status(err.response.status).json({ 
           error: 'Proxy failed', 
           detail: err.message,
-          status: err.response.status 
+          status: err.response.status,
+          url: streamUrl
         });
-      } else if (err.code === 'ECONNABORTED') {
+      } else if (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT') {
         res.status(504).json({ 
           error: 'Request timeout',
           message: 'The stream server did not respond within 60 seconds. The stream may be down or unreachable.',
+          url: streamUrl
+        });
+      } else if (err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED') {
+        res.status(502).json({ 
+          error: 'Connection failed',
+          message: 'Unable to connect to stream server. The URL may be invalid or the server may be down.',
           url: streamUrl
         });
       } else {
         res.status(500).json({ 
           error: 'Proxy failed', 
           detail: err.message,
+          code: err.code,
           url: streamUrl
         });
       }
