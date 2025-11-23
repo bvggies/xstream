@@ -194,8 +194,16 @@ const getBaseUrl = (req) => {
   }
   
   // Fallback to constructing from request
-  const protocol = req.protocol || 'https';
-  const host = req.get('host') || req.headers.host;
+  // On Vercel, use x-forwarded-proto header
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+  const host = req.headers['x-forwarded-host'] || req.get('host') || req.headers.host;
+  
+  if (!host) {
+    // Last resort: use Vercel URL from environment
+    console.warn('Could not determine host from request, using fallback');
+    return 'https://xstream-backend.vercel.app';
+  }
+  
   return `${protocol}://${host}`;
 };
 
@@ -243,6 +251,10 @@ const proxyM3U8 = async (req, res, next) => {
       // Get base URL for proxy
       const baseUrl = getBaseUrl(req);
       const proxyBaseUrl = `${baseUrl}/api/matches/proxy`;
+      
+      console.log('Proxy M3U8 - Base URL:', baseUrl);
+      console.log('Proxy M3U8 - Proxy Base URL:', proxyBaseUrl);
+      console.log('Proxy M3U8 - Original URL:', streamUrl);
 
       // Get base URL for resolving relative paths
       const pathParts = parsedUrl.pathname.split('/').filter(p => p);
@@ -297,6 +309,8 @@ const proxyM3U8 = async (req, res, next) => {
         }
       });
       body = rewrittenLines.join('\n');
+      
+      console.log('Proxy M3U8 - Rewritten playlist (first 500 chars):', body.substring(0, 500));
 
       res.setHeader('Content-Type', 'application/vnd.apple.mpegURL');
       res.send(body);
@@ -356,6 +370,7 @@ const proxySegment = async (req, res, next) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     try {
+      console.log('Proxy Segment - Fetching:', fileUrl);
       const response = await axios.get(fileUrl, {
         responseType: 'arraybuffer',
         headers: { 
@@ -365,6 +380,8 @@ const proxySegment = async (req, res, next) => {
         timeout: 60000, // 60 second timeout
         maxRedirects: 5,
       });
+      
+      console.log('Proxy Segment - Success, Content-Type:', response.headers['content-type']);
 
       // Determine content type based on file extension or response headers
       let contentType = response.headers['content-type'];
