@@ -353,6 +353,14 @@ const WatchMatch = () => {
                         }
                       });
 
+                      newHlsInstance.on(Hls.Events.MANIFEST_LOADED, (event, data) => {
+                        console.log('HLS manifest loaded via proxy:', {
+                          levels: data.levels?.length,
+                          url: data.url,
+                          details: data.details
+                        });
+                      });
+
                       newHlsInstance.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
                         console.log('HLS quality switched to level:', data.level);
                       });
@@ -362,8 +370,20 @@ const WatchMatch = () => {
                       });
 
                       newHlsInstance.on(Hls.Events.ERROR, (event, data) => {
-                        console.error('HLS Error (proxy):', data);
+                        console.error('HLS Error (proxy):', {
+                          type: data.type,
+                          details: data.details,
+                          fatal: data.fatal,
+                          url: data.url,
+                          error: data.error,
+                          response: data.response
+                        });
                         if (data.fatal) {
+                          if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR || 
+                              data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT) {
+                            console.error('Proxy manifest load failed. Check if BASE_URL is set in Vercel.');
+                            toast.error('Proxy failed to load stream. Check server logs.', { duration: 4000 });
+                          }
                           toast.error('Stream failed even with proxy. Trying next stream...', { duration: 4000 });
                           setTimeout(() => tryNextLink(), 2000);
                         }
